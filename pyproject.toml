@@ -1,17 +1,36 @@
 [project]
 name = "sprout"
 version = "0.1.0"
-description = "Add your description here"
+description = "Your codebase's memory: cited answers from git history (early stage)."
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     { name = "Akchhya Singh", email = "akchhya.dev@gmail.com" }
 ]
 requires-python = ">=3.11"
+keywords = ["git", "mcp", "rag", "code-search", "developer-tools", "cli"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Version Control :: Git",
+]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/azzs11/sprout"
+Repository = "https://github.com/azzs11/sprout"
+Issues = "https://github.com/azzs11/sprout/issues"
 
 [project.scripts]
 sprout = "sprout:main"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
