@@ -179,6 +179,15 @@ def test_model_change_re_embeds(payments: RepoBuilder, store: Store) -> None:
     assert (stats.embedding_model, stats.embedded) == ("b", 7)
 
 
+def test_document_format_change_re_embeds(payments: RepoBuilder, store: Store) -> None:
+    embedder = FakeEmbedder()
+    _index(payments, store, embedder=embedder)
+    store.set_meta("embedding_doc_version", "old")
+    calls = embedder.calls
+    assert _index(payments, store, embedder=embedder).embedded == 7
+    assert embedder.calls > calls
+
+
 def test_vector_mode_without_vectors_raises(payments: RepoBuilder, store: Store) -> None:
     _index(payments, store)
     with pytest.raises(VectorsUnavailableError):

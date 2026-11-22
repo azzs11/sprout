@@ -14,6 +14,9 @@ if TYPE_CHECKING:
     from fastembed import TextEmbedding
 
 DEFAULT_EMBED_MODEL = "BAAI/bge-small-en-v1.5"
+# Commit documents put the summary, symbols and files first, so the first 128 tokens carry
+# most of the signal. Measured on pytest (17.9k commits): 13 -> 57 docs/s on an M-series CPU.
+DEFAULT_MAX_TOKENS = 128
 
 
 class Embedder(Protocol):
@@ -41,9 +44,10 @@ class Embedder(Protocol):
 class FastEmbedder:
     """Local ONNX embedding model, downloaded once into ``cache_dir`` and then used offline."""
 
-    def __init__(self, model: str, cache_dir: Path) -> None:
+    def __init__(self, model: str, cache_dir: Path, max_tokens: int = DEFAULT_MAX_TOKENS) -> None:
         self._model_name = model
         self._cache_dir = cache_dir
+        self._max_tokens = max_tokens
         self._model: TextEmbedding | None = None
         self._dim = _supported_dim(model)
 
@@ -77,7 +81,16 @@ class FastEmbedder:
                     f"Could not load the embedding model {self._model_name}: {exc}",
                     hint="Connect to the internet once to download it, or index with --no-embed.",
                 ) from exc
+            _limit_tokens(self._model, self._max_tokens)
         return self._model
+
+
+def _limit_tokens(model: object, max_tokens: int) -> None:
+    """Truncate inputs at ``max_tokens``; skipped quietly if fastembed's internals change."""
+    tokenizer = getattr(getattr(model, "model", None), "tokenizer", None)
+    enable = getattr(tokenizer, "enable_truncation", None)
+    if callable(enable):
+        enable(max_length=max_tokens)
 
 
 def quiet_model_downloads() -> None:

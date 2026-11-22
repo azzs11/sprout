@@ -6,6 +6,9 @@ from collections.abc import Sequence
 
 from sprout.core.index.store import Store
 
+# Bump when the document layout changes, so existing vectors are rebuilt.
+DOC_VERSION = "2"
+
 # What each commit's embedding is built from (also reused as the reranker's document text).
 DOC_SQL = """
 SELECT f.rowid, f.summary, substr(f.body, 1, 800), substr(f.paths, 1, 600),
@@ -18,8 +21,9 @@ def ensure_table(store: Store, model: str, dim: int) -> None:
     """Create the vector table for ``model``; drop old vectors if the model changed."""
     current = store.get_meta("embedding_model")
     current_dim = store.get_meta("embedding_dim")
+    current_doc = store.get_meta("embedding_doc_version")
     exists = _exists(store)
-    if exists and current == model and current_dim == str(dim):
+    if exists and current == model and current_dim == str(dim) and current_doc == DOC_VERSION:
         return
     db = store.db
     db.execute("BEGIN IMMEDIATE")
@@ -31,6 +35,7 @@ def ensure_table(store: Store, model: str, dim: int) -> None:
         )
         store.set_meta("embedding_model", model)
         store.set_meta("embedding_dim", str(dim))
+        store.set_meta("embedding_doc_version", DOC_VERSION)
         db.execute("COMMIT")
     except BaseException:
         db.execute("ROLLBACK")
@@ -93,12 +98,13 @@ def documents(store: Store, ids: Sequence[int]) -> dict[int, str]:
     out: dict[int, str] = {}
     for row in rows:
         summary, body, paths, symbols, llm = (str(x or "") for x in row[1:])
+        # Most informative first: the embedder truncates at ~128 tokens.
         parts = [
             summary,
             llm,
+            f"Symbols: {symbols[:300]}" if symbols else "",
+            f"Files: {paths[:300]}" if paths else "",
             body,
-            f"Files: {paths}" if paths else "",
-            f"Symbols: {symbols}" if symbols else "",
         ]
         out[int(row[0])] = "\n".join(p for p in parts if p.strip())
     return out
