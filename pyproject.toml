@@ -24,7 +24,9 @@ classifiers = [
 dependencies = [
     "fastembed>=0.9.1",
     "httpx>=0.28.1",
+    "platformdirs>=4.14.8",
     "pydantic>=2.14.4",
+    "pydantic-settings>=2.16.3",
     "pygit2>=1.21.0",
     "rich>=15.0.0",
     "sqlite-vec>=0.1.9",
@@ -52,14 +54,22 @@ Issues = "https://github.com/azzs11/sprout/issues"
 [project.scripts]
 sprout = "sprout.cli.app:main"
 
+[project.optional-dependencies]
+anthropic = [
+    "anthropic>=2.12.0",
+]
+
 [build-system]
 requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
+    "anthropic>=2.12.0",
     "hypothesis>=6.170.17",
+    "platformdirs>=4.14.8",
     "pre-commit>=4.7.0",
+    "pydantic-settings>=2.16.3",
     "pyright>=1.1.414",
     "pytest>=9.2.0",
     "pytest-cov>=7.1.0",
@@ -87,7 +97,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "S603", "S607", "D", "PLR2004"]
+"tests/**" = ["S101", "S603", "S607", "D", "ARG002", "E501"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -104,6 +114,7 @@ addopts = ["--import-mode=importlib", "--strict-markers", "--strict-config", "-r
 pythonpath = ["."]
 testpaths = ["tests"]
 xfail_strict = true
+markers = ["models: downloads and runs real local models (opt-in, weekly CI)"]
 
 [tool.coverage.run]
 source = ["sprout"]
