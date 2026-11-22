@@ -1,0 +1,80 @@
+# WhyBench v0 source repositories. All permissively licensed; cloned at build time and pinned
+# to the commit recorded in data/whybench-v0/repos.lock.json.
+# split = "tune": may be looked at while developing Sprout. split = "test": reported numbers only.
+
+[[repo]]
+name = "click"
+url = "https://github.com/pallets/click.git"
+license = "BSD-3-Clause"
+language = "python"
+split = "tune"
+
+[[repo]]
+name = "httpx"
+url = "https://github.com/encode/httpx.git"
+license = "BSD-3-Clause"
+language = "python"
+split = "tune"
+
+[[repo]]
+name = "cobra"
+url = "https://github.com/spf13/cobra.git"
+license = "Apache-2.0"
+language = "go"
+split = "tune"
+
+[[repo]]
+name = "requests"
+url = "https://github.com/psf/requests.git"
+license = "Apache-2.0"
+language = "python"
+split = "test"
+
+[[repo]]
+name = "flask"
+url = "https://github.com/pallets/flask.git"
+license = "BSD-3-Clause"
+language = "python"
+split = "test"
+
+[[repo]]
+name = "attrs"
+url = "https://github.com/python-attrs/attrs.git"
+license = "MIT"
+language = "python"
+split = "test"
+
+[[repo]]
+name = "express"
+url = "https://github.com/expressjs/express.git"
+license = "MIT"
+language = "javascript"
+split = "test"
+
+[[repo]]
+name = "axios"
+url = "https://github.com/axios/axios.git"
+license = "MIT"
+language = "javascript"
+split = "test"
+
+[[repo]]
+name = "gin"
+url = "https://github.com/gin-gonic/gin.git"
+license = "MIT"
+language = "go"
+split = "test"
+
+[[repo]]
+name = "ripgrep"
+url = "https://github.com/BurntSushi/ripgrep.git"
+license = "MIT OR Unlicense"
+language = "rust"
+split = "test"
+
+[[repo]]
+name = "pytest"
+url = "https://github.com/pytest-dev/pytest.git"
+license = "MIT"
+language = "python"
+split = "test"

@@ -98,12 +98,16 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S603", "S607", "D", "ARG002", "E501"]
+"bench/**" = ["S603", "S607", "E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["sprout", "bench", "tests"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
 [tool.pyright]
-include = ["src", "tests"]
+include = ["src", "tests", "bench"]
 strict = ["src"]
 pythonVersion = "3.11"
 venvPath = "."
