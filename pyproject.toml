@@ -21,7 +21,12 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Version Control :: Git",
 ]
-dependencies = []
+dependencies = [
+    "pydantic>=2.14.4",
+    "pygit2>=1.21.0",
+    "rich>=15.0.0",
+    "typer>=0.29.2",
+]
 
 [project.urls]
 Homepage = "https://github.com/azzs11/sprout"
@@ -29,8 +34,67 @@ Repository = "https://github.com/azzs11/sprout"
 Issues = "https://github.com/azzs11/sprout/issues"
 
 [project.scripts]
-sprout = "sprout:main"
+sprout = "sprout.cli.app:main"
 
 [build-system]
 requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "hypothesis>=6.170.17",
+    "pre-commit>=4.7.0",
+    "pyright>=1.1.414",
+    "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
+    "pytest-xdist>=3.8.0",
+    "ruff>=0.17.6",
+    "syrupy>=7.0.3",
+]
+
+# ----- tooling -------------------------------------------------------------------
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W", "F", "I", "N", "UP", "B", "A", "C4", "SIM", "PT", "PTH",
+    "RET", "TC", "ARG", "S", "RUF", "D",
+]
+ignore = [
+    "D105", "D107",  # magic methods and __init__ need no docstring
+    "D203", "D213",  # pick one docstring style: summary on the first line
+    "TC001", "TC002", "TC003",  # Typer and Pydantic need real imports at runtime
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S603", "S607", "D", "PLR2004"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.pyright]
+include = ["src", "tests"]
+strict = ["src"]
+pythonVersion = "3.11"
+venvPath = "."
+venv = ".venv"
+
+[tool.pytest.ini_options]
+addopts = ["--import-mode=importlib", "--strict-markers", "--strict-config", "-ra"]
+pythonpath = ["."]
+testpaths = ["tests"]
+xfail_strict = true
+
+[tool.coverage.run]
+source = ["sprout"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
+skip_covered = true
+exclude_also = ["if __name__ == .__main__.:", "\\.\\.\\.$"]

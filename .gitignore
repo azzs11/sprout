@@ -9,6 +9,15 @@ wheels/
 # Virtual environments
 .venv
 
+# Test and coverage output
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.pytest_cache/
+.hypothesis/
+.ruff_cache/
+
 # macOS
 .DS_Store
 
