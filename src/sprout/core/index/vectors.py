@@ -1,13 +1,26 @@
-"""Commit embeddings stored in a sqlite-vec ``vec0`` table inside the index."""
+"""Commit embeddings stored as float32 BLOBs, searched with a numpy dot product.
+
+No SQLite extension is needed, so this works on every Python build. Some, such as the
+python.org macOS builds, cannot load extensions at all. The search is a brute-force scan,
+as sqlite-vec's would be, and the vector matrix is cached per open index.
+"""
 
 from __future__ import annotations
 
 from collections.abc import Sequence
 
+import numpy as np
+from numpy.typing import NDArray
+
 from sprout.core.index.store import Store
 
 # Bump when the document layout changes, so existing vectors are rebuilt.
 DOC_VERSION = "2"
+_CACHE_KEY = "vectors"
+_MISSING = (
+    "SELECT {cols} FROM commits c"
+    " WHERE NOT EXISTS (SELECT 1 FROM vectors v WHERE v.commit_id = c.id)"
+)
 
 # What each commit's embedding is built from (also reused as the reranker's document text).
 DOC_SQL = """
@@ -18,21 +31,17 @@ FROM fts f WHERE f.rowid IN ({ids})
 
 
 def ensure_table(store: Store, model: str, dim: int) -> None:
-    """Create the vector table for ``model``; drop old vectors if the model changed."""
-    current = store.get_meta("embedding_model")
-    current_dim = store.get_meta("embedding_dim")
-    current_doc = store.get_meta("embedding_doc_version")
-    exists = _exists(store)
-    if exists and current == model and current_dim == str(dim) and current_doc == DOC_VERSION:
+    """Prepare for ``model``'s vectors; drop old ones if the model or document format changed."""
+    if (
+        store.get_meta("embedding_model") == model
+        and store.get_meta("embedding_dim") == str(dim)
+        and store.get_meta("embedding_doc_version") == DOC_VERSION
+    ):
         return
     db = store.db
     db.execute("BEGIN IMMEDIATE")
     try:
-        db.execute("DROP TABLE IF EXISTS vec")
-        db.execute(
-            "CREATE VIRTUAL TABLE vec USING vec0("
-            f"embedding float[{int(dim)}] distance_metric=cosine)"
-        )
+        db.execute("DELETE FROM vectors")
         store.set_meta("embedding_model", model)
         store.set_meta("embedding_dim", str(dim))
         store.set_meta("embedding_doc_version", DOC_VERSION)
@@ -40,14 +49,13 @@ def ensure_table(store: Store, model: str, dim: int) -> None:
     except BaseException:
         db.execute("ROLLBACK")
         raise
+    store.cache.pop(_CACHE_KEY, None)
 
 
 def unembedded(store: Store, limit: int) -> list[tuple[int, str]]:
     """Up to ``limit`` commits without a vector, as ``(id, document text)``."""
     rows = store.db.execute(
-        "SELECT c.id FROM commits c WHERE NOT EXISTS (SELECT 1 FROM vec v WHERE v.rowid = c.id)"
-        " ORDER BY c.committed_at DESC LIMIT ?",
-        (limit,),
+        _MISSING.format(cols="c.id") + " ORDER BY c.committed_at DESC LIMIT ?", (limit,)
     ).fetchall()
     ids = [int(r[0]) for r in rows]
     texts = documents(store, ids)
@@ -56,37 +64,35 @@ def unembedded(store: Store, limit: int) -> list[tuple[int, str]]:
 
 def count_unembedded(store: Store) -> int:
     """How many commits still need a vector."""
-    return store.count(
-        "SELECT count(*) FROM commits c WHERE NOT EXISTS (SELECT 1 FROM vec v WHERE v.rowid = c.id)"
-    )
+    return store.count(_MISSING.format(cols="count(*)"))
 
 
 def add(store: Store, items: Sequence[tuple[int, Sequence[float]]]) -> None:
-    """Store vectors in one transaction."""
-    import sqlite_vec  # pyright: ignore[reportMissingTypeStubs]
-
+    """Store unit-length vectors in one transaction."""
     db = store.db
     db.execute("BEGIN IMMEDIATE")
     try:
         db.executemany(
-            "INSERT OR REPLACE INTO vec (rowid, embedding) VALUES (?, ?)",
-            [(i, sqlite_vec.serialize_float32(list(v))) for i, v in items],
+            "INSERT OR REPLACE INTO vectors (commit_id, embedding) VALUES (?, ?)",
+            [(i, _unit(v).tobytes()) for i, v in items],
         )
         db.execute("COMMIT")
     except BaseException:
         db.execute("ROLLBACK")
         raise
+    store.cache.pop(_CACHE_KEY, None)
 
 
 def knn(store: Store, query: Sequence[float], limit: int) -> list[tuple[int, float]]:
     """Nearest commits by cosine similarity (best first), with similarity scores."""
-    import sqlite_vec  # pyright: ignore[reportMissingTypeStubs]
-
-    rows = store.db.execute(
-        "SELECT rowid, distance FROM vec WHERE embedding MATCH ? AND k = ? ORDER BY distance",
-        (sqlite_vec.serialize_float32(list(query)), limit),
-    ).fetchall()
-    return [(int(r[0]), 1.0 - float(r[1])) for r in rows]
+    ids, matrix = _matrix(store)
+    if not len(ids):
+        return []
+    scores = matrix @ _unit(query)
+    k = min(limit, len(ids))
+    top = np.argpartition(-scores, k - 1)[:k]
+    order = top[np.argsort(-scores[top])]
+    return [(int(ids[i]), float(scores[i])) for i in order]
 
 
 def documents(store: Store, ids: Sequence[int]) -> dict[int, str]:
@@ -110,5 +116,22 @@ def documents(store: Store, ids: Sequence[int]) -> dict[int, str]:
     return out
 
 
-def _exists(store: Store) -> bool:
-    return store.db.execute("SELECT 1 FROM sqlite_master WHERE name = 'vec'").fetchone() is not None
+def _unit(vector: Sequence[float]) -> NDArray[np.float32]:
+    arr = np.asarray(vector, dtype=np.float32)
+    norm = float(np.linalg.norm(arr))
+    return arr / norm if norm else arr
+
+
+def _matrix(store: Store) -> tuple[NDArray[np.int64], NDArray[np.float32]]:
+    cached = store.cache.get(_CACHE_KEY)
+    if isinstance(cached, tuple):
+        return cached  # pyright: ignore[reportUnknownVariableType]
+    rows = store.db.execute("SELECT commit_id, embedding FROM vectors").fetchall()
+    dim = int(store.get_meta("embedding_dim") or 0)
+    ids = np.fromiter((int(r[0]) for r in rows), dtype=np.int64, count=len(rows))
+    if rows and dim:
+        matrix = np.frombuffer(b"".join(r[1] for r in rows), dtype=np.float32).reshape(-1, dim)
+    else:
+        matrix = np.zeros((0, max(dim, 1)), dtype=np.float32)
+    store.cache[_CACHE_KEY] = (ids, matrix)
+    return ids, matrix

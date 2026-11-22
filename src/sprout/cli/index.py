@@ -107,7 +107,7 @@ def render_stats(stats: IndexStats, out: Console) -> None:
     vectors = f"{stats.embedded:,}" + (
         f" ({stats.embedding_model})" if stats.embedding_model else ""
     )
-    table.add_row("embedded", vectors if stats.vectors_available else "unavailable on this Python")
+    table.add_row("embedded", vectors)
     table.add_row("summarised", f"{stats.summarised:,}")
     table.add_row("index", stats.db_path)
     out.print(table)

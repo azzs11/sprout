@@ -89,8 +89,6 @@ def _rerank(
 def _vector_problem(store: Store, embedder: Embedder | None) -> str | None:
     if embedder is None:
         return "no embedding model configured."
-    if not store.vectors_available:
-        return "this Python cannot load SQLite extensions."
     if store.get_meta("embedding_model") != embedder.name:
         return f"the index has no vectors for {embedder.name}; run sprout index."
     return None

@@ -66,9 +66,9 @@ def save(store: Store, commit_id: int, summary: str, model_id: str) -> None:
             (summary, model_id, commit_id),
         )
         db.execute("UPDATE fts SET llm_summary = ? WHERE rowid = ?", (summary, commit_id))
-        if db.execute("SELECT 1 FROM sqlite_master WHERE name = 'vec'").fetchone():
-            db.execute("DELETE FROM vec WHERE rowid = ?", (commit_id,))
+        db.execute("DELETE FROM vectors WHERE commit_id = ?", (commit_id,))
         db.execute("COMMIT")
     except BaseException:
         db.execute("ROLLBACK")
         raise
+    store.cache.clear()

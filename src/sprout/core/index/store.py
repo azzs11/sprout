@@ -28,7 +28,7 @@ class Store:
         self._db.execute("PRAGMA synchronous = NORMAL")
         self._db.execute("PRAGMA foreign_keys = ON")
         self._db.execute("PRAGMA busy_timeout = 5000")
-        self.vectors_available = _load_sqlite_vec(self._db)
+        self.cache: dict[str, object] = {}  # per-connection caches, e.g. the vector matrix
         self._db.executescript(schema.SCHEMA)
         version = self.get_meta("schema_version")
         if version is None:
@@ -100,10 +100,9 @@ class Store:
                 if row is None:
                     continue
                 self._db.execute("DELETE FROM fts WHERE rowid = ?", (row[0],))
-                if self._has_vec_table():
-                    self._db.execute("DELETE FROM vec WHERE rowid = ?", (row[0],))
-                self._db.execute("DELETE FROM commits WHERE id = ?", (row[0],))
+                self._db.execute("DELETE FROM commits WHERE id = ?", (row[0],))  # cascades
                 removed += 1
+        self.cache.clear()
         return removed
 
     def _insert(self, record: CommitRecord) -> None:
@@ -210,7 +209,7 @@ class Store:
     def stats(self) -> IndexStats:
         """Summary of what is indexed."""
         updated = self.get_meta("updated_at")
-        embedded = self.count("SELECT count(*) FROM vec") if self._has_vec_table() else 0
+        embedded = self.count("SELECT count(*) FROM vectors")
         return IndexStats(
             db_path=str(self.path),
             commits=self.count("SELECT count(*) FROM commits"),
@@ -220,7 +219,6 @@ class Store:
             head=self.get_meta("head"),
             updated_at=datetime.fromisoformat(updated) if updated else None,
             embedding_model=self.get_meta("embedding_model"),
-            vectors_available=self.vectors_available,
         )
 
     def mark_updated(self, head: str | None) -> None:
@@ -235,10 +233,6 @@ class Store:
     def db(self) -> sqlite3.Connection:
         """Raw connection, used by the vector and hit helpers in this package."""
         return self._db
-
-    def _has_vec_table(self) -> bool:
-        row = self._db.execute("SELECT 1 FROM sqlite_master WHERE name = 'vec'").fetchone()
-        return row is not None
 
     def _transaction(self) -> _Transaction:
         return _Transaction(self._db)
@@ -260,16 +254,3 @@ class _Transaction:
         tb: TracebackType | None,
     ) -> None:
         self._db.execute("ROLLBACK" if exc_type else "COMMIT")
-
-
-def _load_sqlite_vec(db: sqlite3.Connection) -> bool:
-    """Load the sqlite-vec extension. Some Python builds cannot load extensions at all."""
-    try:
-        import sqlite_vec  # pyright: ignore[reportMissingTypeStubs]
-
-        db.enable_load_extension(True)
-        sqlite_vec.load(db)
-        db.enable_load_extension(False)
-    except (AttributeError, ImportError, sqlite3.OperationalError):
-        return False
-    return True

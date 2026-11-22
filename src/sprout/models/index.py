@@ -90,7 +90,6 @@ class IndexStats(Model):
     head: str | None = Field(description="HEAD when the index was last updated.")
     updated_at: datetime | None
     embedding_model: str | None
-    vectors_available: bool = Field(description="False if sqlite-vec could not be loaded.")
 
 
 class SearchMode(StrEnum):

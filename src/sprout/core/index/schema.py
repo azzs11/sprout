@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-SCHEMA_VERSION = "1"
+SCHEMA_VERSION = "2"  # 2: vectors moved from sqlite-vec to a plain BLOB table
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (
@@ -67,6 +67,11 @@ CREATE TABLE IF NOT EXISTS reverts (
     target    TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS reverts_target ON reverts (target);
+
+CREATE TABLE IF NOT EXISTS vectors (
+    commit_id INTEGER PRIMARY KEY REFERENCES commits (id) ON DELETE CASCADE,
+    embedding BLOB NOT NULL
+);
 
 CREATE VIRTUAL TABLE IF NOT EXISTS fts USING fts5 (
     summary, body, paths, symbols, code, llm_summary,

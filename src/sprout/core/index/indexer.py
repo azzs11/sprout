@@ -11,7 +11,7 @@ from sprout.core.index import summarise, vectors
 from sprout.core.index.embedder import Embedder
 from sprout.core.index.store import Store
 from sprout.core.index.summarise import Summariser
-from sprout.errors import ModelError, NoCommitsError, VectorsUnavailableError
+from sprout.errors import ModelError, NoCommitsError
 from sprout.models import IndexStats
 
 
@@ -130,11 +130,6 @@ def _summarise(
 
 
 def _embed(store: Store, embedder: Embedder, progress: Progress, options: IndexOptions) -> None:
-    if not store.vectors_available:
-        progress.note(
-            str(VectorsUnavailableError("this Python cannot load SQLite extensions.").message)
-        )
-        return
     vectors.ensure_table(store, embedder.name, embedder.dim)
     progress.stage("embeddings", vectors.count_unembedded(store))
     while batch := vectors.unembedded(store, options.embed_batch_size):
