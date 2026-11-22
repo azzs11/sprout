@@ -228,3 +228,6 @@ class SearchResults(_Model):
     mode: SearchMode
     reranked: bool
     hits: list[SearchHit]
+    notes: list[str] = Field(
+        default_factory=list, description="Why a retriever or the reranker was skipped."
+    )

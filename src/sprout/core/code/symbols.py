@@ -49,20 +49,32 @@ def definitions(path: str, source: bytes) -> list[Definition]:
     return list(_walk(tree.root_node, spec, prefix=(), depth=0))
 
 
-def symbols_for_lines(defs: list[Definition], start: int, count: int) -> list[str]:
+def blank_rows(source: bytes) -> frozenset[int]:
+    """0-based rows that are empty or whitespace only."""
+    return frozenset(i for i, line in enumerate(source.split(b"\n")) if not line.strip())
+
+
+def symbols_for_lines(
+    defs: list[Definition], start: int, count: int, blank: frozenset[int] = frozenset()
+) -> list[str]:
     """Innermost definitions overlapping 1-based lines ``start .. start+count-1``.
 
-    A pure insertion (``count == 0``) is treated as touching the line it follows.
+    A pure insertion (``count == 0``) is treated as touching the line it follows. An outer
+    definition counts only if the hunk touches its own non-blank lines, not just lines of
+    definitions nested inside it.
     """
     first = max(start - 1, 0)
     last = first + max(count, 1) - 1
     hits = [d for d in defs if d.start <= last and d.end >= first]
-    innermost = [
-        d
-        for d in hits
-        if not any(o.depth > d.depth and o.start >= d.start and o.end <= d.end for o in hits)
-    ]
-    return list(dict.fromkeys(d.name for d in innermost))
+    touched: list[str] = []
+    for d in hits:
+        own = set(range(max(d.start, first), min(d.end, last) + 1)) - blank
+        for inner in hits:
+            if inner.depth > d.depth and inner.start >= d.start and inner.end <= d.end:
+                own -= set(range(inner.start, inner.end + 1))
+        if own:
+            touched.append(d.name)
+    return list(dict.fromkeys(touched))
 
 
 def _walk(

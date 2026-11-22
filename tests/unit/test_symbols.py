@@ -7,7 +7,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from sprout.core.code.languages import supported_languages
-from sprout.core.code.symbols import definitions, symbols_for_lines
+from sprout.core.code.symbols import blank_rows, definitions, symbols_for_lines
 
 CASES: dict[str, tuple[bytes, list[str]]] = {
     "a.py": (
@@ -70,6 +70,7 @@ def helper():
     return 3
 """
 DEFS = definitions("p.py", PY)
+BLANK = blank_rows(PY)
 
 
 @pytest.mark.parametrize(
@@ -84,7 +85,7 @@ DEFS = definitions("p.py", PY)
     ],
 )
 def test_symbols_for_lines(start: int, count: int, expected: list[str]) -> None:
-    assert symbols_for_lines(DEFS, start, count) == expected
+    assert symbols_for_lines(DEFS, start, count, BLANK) == expected
 
 
 @given(st.binary(max_size=2_000))

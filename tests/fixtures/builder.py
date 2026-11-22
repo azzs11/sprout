@@ -175,7 +175,48 @@ def non_utf8(root: Path) -> RepoBuilder:
     return repo
 
 
+PAYMENTS_V1 = """class PaymentClient:
+    RETRIES = 3
+
+    def charge(self, amount):
+        for attempt in range(self.RETRIES):
+            if self._send(amount):
+                return True
+        return False
+
+    def _send(self, amount):
+        return amount > 0
+"""
+
+
+def payments(root: Path) -> RepoBuilder:
+    """Realistic history for search: retries, a revert, an issue-linked fix, a security fix."""
+    repo = RepoBuilder(root)
+    repo.write("src/payments.py", PAYMENTS_V1)
+    repo.commit(
+        "feat(payments): retry failed charges three times\n\nThe card network drops ~1% of requests."
+    )
+    repo.write("README.md", "# shop\n").commit("docs: add readme")
+    repo.write("src/payments.py", PAYMENTS_V1.replace("RETRIES = 3", "RETRIES = 0"))
+    bad = repo.commit("perf(payments): disable charge retries to cut latency")
+    repo.revert(bad)
+    repo.write("src/auth.py", "def verify_token(token):\n    return token.startswith('t_')\n")
+    repo.commit("feat(auth): add verify_token")
+    repo.write(
+        "src/auth.py",
+        "def verify_token(token):\n    return bool(token) and token.startswith('t_')\n",
+    )
+    repo.commit("fix(auth): reject empty tokens in verify_token (#42)\n\nFixes #42.")
+    repo.write(
+        "src/auth.py",
+        "import hmac\n\ndef verify_token(token):\n    return hmac.compare_digest(token[:2], 't_')\n",
+    )
+    repo.commit("fix(auth): compare tokens in constant time to prevent timing attacks")
+    return repo
+
+
 SCENARIOS: dict[str, Callable[[Path], RepoBuilder]] = {
+    "payments": payments,
     "empty": empty,
     "unborn_with_changes": unborn_with_changes,
     "linear": linear,

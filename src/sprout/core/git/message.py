@@ -21,7 +21,8 @@ _REF = re.compile(
 )
 _FIX_WORDS = re.compile(r"\b(fix(e[sd])?|bug|hotfix|regression|crash|broken)\b", re.IGNORECASE)
 _SECURITY_WORDS = re.compile(
-    r"\b(security|vulnerab\w*|CVE-\d{4}-\d+|GHSA-[\w-]+|XSS|CSRF|SSRF|injection|exploit)\b",
+    r"\b(security|vulnerab\w*|CVE-\d{4}-\d+|GHSA-[\w-]+|XSS|CSRF|SSRF|injection|exploit"
+    r"|timing[- ]attacks?|path traversal|privilege escalation|auth(?:entication)? bypass|RCE)\b",
     re.IGNORECASE,
 )
 _BREAKING = re.compile(r"^BREAKING[ -]CHANGE:", re.MULTILINE)

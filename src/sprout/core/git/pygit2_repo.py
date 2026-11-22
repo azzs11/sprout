@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 
 import pygit2
-from pygit2.enums import DeltaStatus, FileStatus, SortMode
+from pygit2.enums import DeltaStatus, FileStatus, ObjectType, SortMode
 
+from sprout.core.git.convert import DELTA_KINDS, EMPTY_TREE, commit_model
+from sprout.core.git.reader import commit_patch, read_commit
 from sprout.errors import (
     BareRepositoryError,
     NotARepositoryError,
@@ -18,16 +19,13 @@ from sprout.errors import (
 from sprout.models import (
     ChangeKind,
     Commit,
+    CommitRecord,
     Diff,
     FileChange,
     FileDiff,
     History,
-    Person,
     RepoStatus,
 )
-
-# libgit2 resolves the well-known empty tree without it existing in the object database.
-EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 
 _STAGED_FLAGS: dict[FileStatus, ChangeKind] = {
     FileStatus.INDEX_NEW: ChangeKind.ADDED,
@@ -42,17 +40,6 @@ _UNSTAGED_FLAGS: dict[FileStatus, ChangeKind] = {
     FileStatus.WT_DELETED: ChangeKind.DELETED,
     FileStatus.WT_RENAMED: ChangeKind.RENAMED,
     FileStatus.WT_TYPECHANGE: ChangeKind.TYPE_CHANGED,
-}
-
-_DELTA_KINDS: dict[DeltaStatus, ChangeKind] = {
-    DeltaStatus.ADDED: ChangeKind.ADDED,
-    DeltaStatus.DELETED: ChangeKind.DELETED,
-    DeltaStatus.MODIFIED: ChangeKind.MODIFIED,
-    DeltaStatus.RENAMED: ChangeKind.RENAMED,
-    DeltaStatus.COPIED: ChangeKind.COPIED,
-    DeltaStatus.TYPECHANGE: ChangeKind.TYPE_CHANGED,
-    DeltaStatus.UNTRACKED: ChangeKind.UNTRACKED,
-    DeltaStatus.CONFLICTED: ChangeKind.CONFLICTED,
 }
 
 
@@ -160,7 +147,7 @@ class Pygit2Repo:
         for commit in self._walk(start, path):
             if limit is not None and len(commits) >= limit:
                 break
-            commits.append(_commit_model(commit))
+            commits.append(commit_model(commit))
         return History(commits=commits, path=path)
 
     def _resolve(self, rev: str | None) -> pygit2.Commit | None:
@@ -179,6 +166,50 @@ class Pygit2Repo:
             if path is None or _touches(commit, path):
                 yield commit
 
+    # ----- indexing --------------------------------------------------------------
+
+    @property
+    def git_dir(self) -> Path:
+        """Absolute path of the ``.git`` directory."""
+        return Path(self._repo.path).resolve()
+
+    @property
+    def head_hash(self) -> str | None:
+        """Full hash of HEAD, or None before the first commit."""
+        return None if self._repo.head_is_unborn else str(self._repo.head.target)
+
+    def walk_hashes(self, *, rev: str | None = None, since: int | None = None) -> Iterator[str]:
+        """Hashes reachable from ``rev``, newest first, stopping at commit time ``since``."""
+        start = self._resolve(rev)
+        if start is None:
+            return
+        for commit in self._repo.walk(start.id, SortMode.TIME):
+            if since is not None and commit.commit_time < since:
+                return
+            yield str(commit.id)
+
+    def has_commit(self, hash_: str) -> bool:
+        """True if the object database still contains this commit."""
+        try:
+            obj = self._repo.get(hash_)
+        except ValueError:
+            return False
+        return obj is not None and obj.type == ObjectType.COMMIT
+
+    def read_commit(self, hash_: str) -> CommitRecord:
+        """Everything the history index stores about one commit."""
+        return read_commit(self._repo, self._commit(hash_))
+
+    def commit_patch(self, hash_: str, *, max_chars: int = 12_000) -> str:
+        """Unified diff of one commit against its first parent, cut to ``max_chars``."""
+        return commit_patch(self._repo, self._commit(hash_), max_chars)
+
+    def _commit(self, hash_: str) -> pygit2.Commit:
+        try:
+            return self._repo[hash_].peel(pygit2.Commit)
+        except (KeyError, ValueError):
+            raise RevisionNotFoundError(hash_) from None
+
     def _require_worktree(self) -> None:
         if self._repo.is_bare:
             raise BareRepositoryError(str(self.root))
@@ -191,7 +222,7 @@ def _changes(path: str, flags: int, table: dict[FileStatus, ChangeKind]) -> list
 def _file_diff(patch: pygit2.Patch) -> FileDiff:
     delta = patch.delta
     _, additions, deletions = patch.line_stats
-    kind = _DELTA_KINDS.get(DeltaStatus(delta.status), ChangeKind.MODIFIED)
+    kind = DELTA_KINDS.get(DeltaStatus(delta.status), ChangeKind.MODIFIED)
     old_path = delta.old_file.path
     moved = kind in (ChangeKind.RENAMED, ChangeKind.COPIED)
     return FileDiff(
@@ -218,36 +249,3 @@ def _touches(commit: pygit2.Commit, path: str) -> bool:
     if not commit.parents:
         return current is not None
     return all(_entry_id(parent.tree, path) != current for parent in commit.parents)
-
-
-def _decode(raw: bytes, encoding: str | None) -> str:
-    try:
-        return raw.decode(encoding or "utf-8")
-    except (LookupError, UnicodeDecodeError):
-        return raw.decode("utf-8", errors="replace")
-
-
-def _person(sig: pygit2.Signature, encoding: str | None) -> Person:
-    return Person(name=_decode(sig.raw_name, encoding), email=_decode(sig.raw_email, encoding))
-
-
-def _when(sig: pygit2.Signature) -> datetime:
-    tz = timezone(timedelta(minutes=sig.offset))
-    return datetime.fromtimestamp(sig.time, tz=UTC).astimezone(tz)
-
-
-def _commit_model(commit: pygit2.Commit) -> Commit:
-    encoding = commit.message_encoding
-    message = _decode(commit.raw_message, encoding)
-    hash_ = str(commit.id)
-    return Commit(
-        hash=hash_,
-        short_hash=hash_[:7],
-        author=_person(commit.author, encoding),
-        authored_at=_when(commit.author),
-        committer=_person(commit.committer, encoding),
-        committed_at=_when(commit.committer),
-        summary=message.split("\n", 1)[0].strip(),
-        message=message,
-        parents=[str(p) for p in commit.parent_ids],
-    )
