@@ -1,2 +1,10 @@
-def main() -> None:
-    print("Hello from sprout!")
+"""Sprout: your codebase's memory."""
+
+from importlib.metadata import PackageNotFoundError, version
+
+try:
+    __version__ = version("sprout")
+except PackageNotFoundError:  # pragma: no cover - only when running from an uninstalled tree
+    __version__ = "0.0.0"
+
+__all__ = ["__version__"]
