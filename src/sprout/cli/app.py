@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -9,7 +10,12 @@ import typer
 from sprout import __version__
 from sprout.cli.diff import diff
 from sprout.cli.history import history
+from sprout.cli.index import index
+from sprout.cli.search import search
 from sprout.cli.status import status
+from sprout.core.git import open_repo
+from sprout.core.index.store import Store
+from sprout.errors import SproutError
 
 app = typer.Typer(
     name="sprout",
@@ -23,6 +29,8 @@ app = typer.Typer(
 app.command()(status)
 app.command()(diff)
 app.command()(history)
+app.command()(index)
+app.command()(search)
 
 
 def _show_version(value: bool) -> None:
@@ -47,8 +55,20 @@ def _root(
 ) -> None:
     """Your codebase's memory: explore and explain git history."""
     if ctx.invoked_subcommand is None:
-        # Phase 2 replaces this with an overview of the repository's index.
         typer.echo(ctx.get_help())
+        typer.echo(_index_line())
+
+
+def _index_line() -> str:
+    """One line about the current repository's index, for the bare ``sprout`` overview."""
+    try:
+        git = open_repo(Path())
+        with Store.open(git.root, create=False) as store:
+            stats = store.stats()
+    except SproutError as exc:
+        return exc.hint or exc.message
+    when = stats.updated_at.strftime("%Y-%m-%d %H:%M") if stats.updated_at else "never"
+    return f"Index: {stats.commits:,} commits, {stats.embedded:,} embedded, updated {when}."
 
 
 def main() -> None:
