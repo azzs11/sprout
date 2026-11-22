@@ -13,6 +13,7 @@ from sprout.cli.history import history
 from sprout.cli.index import index
 from sprout.cli.search import search
 from sprout.cli.status import status
+from sprout.cli.why import why
 from sprout.core.git import open_repo
 from sprout.core.index.store import Store
 from sprout.errors import SproutError
@@ -31,6 +32,7 @@ app.command()(diff)
 app.command()(history)
 app.command()(index)
 app.command()(search)
+app.command()(why)
 
 
 def _show_version(value: bool) -> None:
