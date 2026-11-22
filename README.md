@@ -1,6 +1,6 @@
 # sprout
 
-> **Status: early stage.** Sprout is being rebuilt from scratch. History search works; cited "why" answers and warnings are next. This README describes where it is going and what works today.
+> **Status: early stage.** Sprout is being rebuilt from scratch. History search and cited "why" answers work; warnings for people and agents are next. This README describes where it is going and what works today.
 
 Sprout is meant to be your codebase's memory. It will answer "why is this code like this?" from git history, cite the commits that prove each answer, and warn people and AI coding agents before they repeat a past mistake.
 
@@ -43,16 +43,48 @@ Results combine keyword search (SQLite FTS5, BM25 ranking) with semantic search 
 
 **Settings:** `SPROUT_*` environment variables or a `.sprout.toml` in the repository root, for example `embed_model = "none"`.
 
+### Ask why
+
+```sh
+sprout why src/_pytest/assertion/rewrite.py:300     # why is this line the way it is?
+sprout why "why do fixtures tear down in reverse order"
+sprout why src/app.py:42 --at v1.2 --json           # as of an older version, for scripts and agents
+```
+
+**For a line,** Sprout works out which commits explain it, newest first:
+- it walks the line's history with `git blame`, following moved, renamed and re-indented code;
+- it adds the other commits that changed the same function or class;
+- it adds reverts and related commits from the index.
+
+It ranks them by how clearly each message states a reason, and prints an answer with the commit hash behind every sentence.
+
+**Facts-only mode:** without a language model (or with `--no-llm`), the answer is built only from quoted commit messages.
+
+**With a local Ollama model** (or Claude, if you opt in), the model writes the answer, but a checker keeps only sentences that cite commits from the evidence. Quoted words must appear in the cited commit, and the rest of the sentence must be supported by it.
+
+`--at` answers as of an older commit and never cites anything newer.
+
+**Before indexing:** line questions work without an index, using git history only. `sprout index` adds function history, reverts and related commits.
+
+### Measured: WhyBench v0
+
+[WhyBench](bench/README.md) asks which commit explains a line or answers a "why" question. The correct answer for each is a commit whose message states a reason. The benchmark covers 205 line questions and 87 natural-language questions from 8 open-source repositories that were not used during development. From [`bench/results/whybench-v0-test.md`](bench/results/whybench-v0-test.md):
+
+| Line questions, correct commit ranked first | All (205) | Buried behind later edits (109) |
+|---|---|---|
+| `git blame` | 0.459 | 0.064 |
+| `sprout why` | **0.605** | **0.376** |
+
+On natural-language questions, plain hybrid search with reranking currently ranks the right commit first more often than `sprout why` does (0.839 vs 0.759). The benchmark card lists this, the other baselines and the known biases.
+
 Everything below is planned and not built yet.
 
 ## Where it is going
 
-- **`sprout why <file>:<line>`**: explains why a line exists. Every claim cites a commit hash, and a claim without a citation is left out.
 - **Regression Memory (`sprout risk`)**: before you commit a change, Sprout checks that code's history for reverts, bug fixes and security fixes, then gives a short risk card with the commits that matter.
 - **MCP server**: AI agents such as Claude Code and Cursor can ask the same questions and run the same risk check before they edit code.
 - **Commit messages that keep the "why"**: Sprout learns the repository's message style and asks you one question about the reason for a change.
 - **Local-first**: the full pipeline is designed to run offline with local models. Code is sent to a remote model only if you configure one.
-- **WhyBench**: an open benchmark of real "why" questions with gold-standard commits, so Sprout's accuracy can be measured and published.
 
 ## Roadmap
 
@@ -61,7 +93,7 @@ Everything below is planned and not built yet.
 | 0 | Honest README, licence, project metadata | Done |
 | 1 | Foundation: Typer + Rich CLI with `--json`, pygit2 git layer, fixture-repo tests, CI on 3 OSes | Done |
 | 2 | History index: commits, hunks, symbols (tree-sitter), hybrid search | Done |
-| 3 | WhyBench and `sprout why` with cited answers | Planned |
+| 3 | WhyBench and `sprout why` with cited answers | Done (v0) |
 | 4 | MCP server for AI agents, `sprout init`, Claude Code plugin | Planned |
 | 5 | Regression Memory: `sprout risk`, git hooks, GitHub Action | Planned |
 | 7 | "Time Machine" web view | Planned |
