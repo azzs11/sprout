@@ -1,0 +1,142 @@
+# serializer version: 1
+# name: test_history_json_snapshot
+  dict({
+    'commits': list([
+      dict({
+        'author': dict({
+          'email': 'ada@example.com',
+          'name': 'Ada Lovelace',
+        }),
+        'authored_at': '2024-01-01T13:00:00Z',
+        'committed_at': '2024-01-01T13:00:00Z',
+        'committer': dict({
+          'email': 'ada@example.com',
+          'name': 'Ada Lovelace',
+        }),
+        'hash': '0ea52cff225df135df179dceebab273457d2861d',
+        'message': '''
+          Merge branch 'feature'
+  
+        ''',
+        'parents': list([
+          'bb0991b0ad35a2ec2cc94968c26da8c3cbe6369b',
+          '50ccab79dbc5fb7b2dbe06b140f310c5c7b922c7',
+        ]),
+        'short_hash': '0ea52cf',
+        'summary': "Merge branch 'feature'",
+      }),
+      dict({
+        'author': dict({
+          'email': 'ada@example.com',
+          'name': 'Ada Lovelace',
+        }),
+        'authored_at': '2024-01-01T12:00:00Z',
+        'committed_at': '2024-01-01T12:00:00Z',
+        'committer': dict({
+          'email': 'ada@example.com',
+          'name': 'Ada Lovelace',
+        }),
+        'hash': 'bb0991b0ad35a2ec2cc94968c26da8c3cbe6369b',
+        'message': '''
+          fix: core is 2
+  
+        ''',
+        'parents': list([
+          '0a10ec42f54b8bb61e2508f8d7e74885d14ed608',
+        ]),
+        'short_hash': 'bb0991b',
+        'summary': 'fix: core is 2',
+      }),
+      dict({
+        'author': dict({
+          'email': 'ada@example.com',
+          'name': 'Ada Lovelace',
+        }),
+        'authored_at': '2024-01-01T11:00:00Z',
+        'committed_at': '2024-01-01T11:00:00Z',
+        'committer': dict({
+          'email': 'ada@example.com',
+          'name': 'Ada Lovelace',
+        }),
+        'hash': '50ccab79dbc5fb7b2dbe06b140f310c5c7b922c7',
+        'message': '''
+          feat: feature
+  
+        ''',
+        'parents': list([
+          '0a10ec42f54b8bb61e2508f8d7e74885d14ed608',
+        ]),
+        'short_hash': '50ccab7',
+        'summary': 'feat: feature',
+      }),
+      dict({
+        'author': dict({
+          'email': 'ada@example.com',
+          'name': 'Ada Lovelace',
+        }),
+        'authored_at': '2024-01-01T10:00:00Z',
+        'committed_at': '2024-01-01T10:00:00Z',
+        'committer': dict({
+          'email': 'ada@example.com',
+          'name': 'Ada Lovelace',
+        }),
+        'hash': '0a10ec42f54b8bb61e2508f8d7e74885d14ed608',
+        'message': '''
+          feat: core
+  
+        ''',
+        'parents': list([
+        ]),
+        'short_hash': '0a10ec4',
+        'summary': 'feat: core',
+      }),
+    ]),
+    'path': None,
+  })
+# ---
+# name: test_staged_diff_json_snapshot
+  dict({
+    'additions': 0,
+    'deletions': 0,
+    'files': list([
+      dict({
+        'additions': 0,
+        'binary': False,
+        'deletions': 0,
+        'kind': 'renamed',
+        'old_path': 'new/place.py',
+        'patch': '''
+          diff --git a/new/place.py b/final/spot.py
+          similarity index 100%
+          rename from new/place.py
+          rename to final/spot.py
+  
+        ''',
+        'path': 'final/spot.py',
+      }),
+    ]),
+    'staged': True,
+  })
+# ---
+# name: test_status_json_snapshot
+  dict({
+    'branch': 'main',
+    'clean': False,
+    'conflicted': list([
+    ]),
+    'detached': False,
+    'head': None,
+    'staged': list([
+      dict({
+        'kind': 'added',
+        'path': 'staged.txt',
+      }),
+    ]),
+    'unborn': True,
+    'unstaged': list([
+    ]),
+    'untracked': list([
+      'untracked.txt',
+    ]),
+  })
+# ---
