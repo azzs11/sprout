@@ -24,3 +24,7 @@ htmlcov/
 # Local notes
 CLAUDE.md
 .claude/
+
+# Local research (not published)
+research_notes/
+reports/
