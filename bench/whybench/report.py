@@ -25,6 +25,12 @@ def _table(title: str, block: dict[str, dict[str, dict[str, float]]], bucket: st
     return [*lines, ""]
 
 
+def _commit(sha: str) -> str:
+    dirty = sha.endswith("-dirty")
+    short = sha.removesuffix("-dirty")[:12]
+    return f"{short}, plus uncommitted changes" if dirty else short
+
+
 def write_report(result: dict[str, object], path: Path) -> None:
     """Write the results tables, with the run's provenance, to ``path``."""
     line = result["line"]
@@ -35,7 +41,7 @@ def write_report(result: dict[str, object], path: Path) -> None:
         f"# WhyBench v0 results ({result['split']} split)",
         "",
         f"Generated {result['date']} by Sprout {result['sprout_version']} "
-        f"(commit {str(result['sprout_commit'])[:12]}). Models: {result['models']}. "
+        f"(commit {_commit(str(result['sprout_commit']))}). Models: {result['models']}. "
         "No LLM was used (retrieval and ranking only).",
         "",
         "Repositories and snapshots: "

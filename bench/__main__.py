@@ -62,7 +62,7 @@ def _models_dir() -> Path:
 
 
 @app.command()
-def build(repos: Repos = None, no_embed: bool = False) -> None:
+def build(repos: Repos = None, no_embed: bool = False, rebuild: bool = False) -> None:
     """Clone each repository, pin its snapshot and build its Sprout index."""
     lock = load_lock()
     embedder = None if no_embed else FastEmbedder(DEFAULT_EMBED_MODEL, _models_dir())
@@ -71,6 +71,9 @@ def build(repos: Repos = None, no_embed: bool = False) -> None:
             continue
         lock[spec.name] = clone_and_pin(spec, lock)
         root = repo_path(spec.name)
+        if rebuild:
+            for suffix in ("", "-wal", "-shm"):
+                (root / ".sprout" / f"index.db{suffix}").unlink(missing_ok=True)
         with Store.open(root, create=True) as store:
             stats = build_index(open_repo(root), store, embedder=embedder)
         typer.echo(f"{spec.name}: {stats.commits} commits, {stats.embedded} embedded")
@@ -160,7 +163,25 @@ def _sprout_commit() -> str:
         capture_output=True,
         check=False,
     )
-    return done.stdout.decode().strip()
+    status = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(Path(__file__).parent.parent),
+            "status",
+            "--porcelain",
+            "--",
+            "src",
+            "bench",
+        ],
+        capture_output=True,
+        check=False,
+    )
+    dirty = any(
+        line and not line.endswith((".json", ".md", ".jsonl"))
+        for line in status.stdout.decode().splitlines()
+    )
+    return done.stdout.decode().strip() + ("-dirty" if dirty else "")
 
 
 if __name__ == "__main__":

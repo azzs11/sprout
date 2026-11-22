@@ -29,6 +29,7 @@ SKIP_PARTS = frozenset(
     {"test", "tests", "testing", "docs", "doc", "examples", "vendor", "benchmarks"}
 )
 MEANINGFUL = re.compile(r"\w+")
+LINES_PER_FILE = 8  # sampled per file; small repos need more to reach the per-repo target
 COMMENT_OR_IMPORT = re.compile(r"^\s*(#|//|/\*|\*|import\b|from\s+\S+\s+import\b|use\s|package\s)")
 
 
@@ -126,7 +127,7 @@ def line_tasks(
         if len(tasks) >= target:
             break
         candidates = meaningful_lines(root, snapshot, path)
-        for number, text in rng.sample(candidates, min(3, len(candidates))):
+        for number, text in rng.sample(candidates, min(LINES_PER_FILE, len(candidates))):
             history = line_log(root, snapshot, path, number)
             infos = commit_info(root, history)
             gold = next((h for h in history if h in infos and is_rationale_commit(infos[h])), None)
