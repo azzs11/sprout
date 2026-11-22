@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from sprout.config import Settings
+from sprout.core.answer.compose import Answerer
 from sprout.core.index.embedder import Embedder, FastEmbedder
 from sprout.core.index.summarise import Summariser
 from sprout.core.retrieve.rerank import FastReranker, Reranker
@@ -40,6 +41,21 @@ def build_provider(settings: Settings) -> Provider:
         "Summaries need a language model, but SPROUT_LLM_PROVIDER is 'none'.",
         hint="Set SPROUT_LLM_PROVIDER=ollama (local) or anthropic, or index without --summarise.",
     )
+
+
+def build_answerer(settings: Settings) -> tuple[Answerer | None, str | None]:
+    """A ``why`` answerer, or None with a short note when no model is usable right now."""
+    if settings.llm_provider == "none":
+        return None, None
+    try:
+        provider = build_provider(settings)
+    except ModelError as exc:
+        return None, f"Facts only: {exc.message}"
+    from sprout.llm.ollama import OllamaProvider
+
+    if isinstance(provider, OllamaProvider) and not provider.available():
+        return None, "Facts only. For written answers start Ollama, or set SPROUT_LLM_PROVIDER."
+    return Answerer(provider), None
 
 
 def build_summariser(settings: Settings) -> Summariser:

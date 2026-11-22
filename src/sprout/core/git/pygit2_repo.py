@@ -9,9 +9,10 @@ import pygit2
 from pygit2.enums import DeltaStatus, FileStatus, ObjectType, SortMode
 
 from sprout.core.git.convert import DELTA_KINDS, EMPTY_TREE, commit_model
-from sprout.core.git.reader import commit_patch, read_commit
+from sprout.core.git.reader import commit_patch, file_patch, read_commit
 from sprout.errors import (
     BareRepositoryError,
+    NoCommitsError,
     NotARepositoryError,
     PathOutsideRepositoryError,
     RevisionNotFoundError,
@@ -203,6 +204,45 @@ class Pygit2Repo:
     def commit_patch(self, hash_: str, *, max_chars: int = 12_000) -> str:
         """Unified diff of one commit against its first parent, cut to ``max_chars``."""
         return commit_patch(self._repo, self._commit(hash_), max_chars)
+
+    def resolve(self, rev: str | None = None) -> str:
+        """Full hash of ``rev`` (default HEAD).
+
+        Raises:
+            NoCommitsError: If ``rev`` is None and the branch has no commits.
+            RevisionNotFoundError: If ``rev`` does not exist.
+        """
+        commit = self._resolve(rev)
+        if commit is None:
+            raise NoCommitsError
+        return str(commit.id)
+
+    def commit(self, hash_: str) -> Commit:
+        """One commit as a model."""
+        return commit_model(self._commit(hash_))
+
+    def read_file(self, rev: str, path: str) -> bytes | None:
+        """File contents at ``rev``, or None if the path does not exist there."""
+        tree = self._commit(rev).tree
+        try:
+            obj = tree[path]
+        except KeyError:
+            return None
+        blob = self._repo.get(obj.id)
+        return blob.data if isinstance(blob, pygit2.Blob) else None
+
+    def is_ancestor(self, ancestor: str, descendant: str) -> bool:
+        """True if ``ancestor`` is ``descendant`` or reachable from it."""
+        if ancestor == descendant:
+            return True
+        try:
+            return self._repo.descendant_of(descendant, ancestor)
+        except (KeyError, ValueError, pygit2.GitError):
+            return False
+
+    def file_patch(self, hash_: str, path: str, *, max_chars: int = 2_000) -> str:
+        """The part of a commit's diff that touches ``path``, cut to ``max_chars``."""
+        return file_patch(self._repo, self._commit(hash_), path, max_chars)
 
     def _commit(self, hash_: str) -> pygit2.Commit:
         try:

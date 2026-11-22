@@ -215,7 +215,24 @@ def payments(root: Path) -> RepoBuilder:
     return repo
 
 
+def lineage(root: Path) -> RepoBuilder:
+    """One line created, its file renamed, then the line changed with a stated reason."""
+    repo = RepoBuilder(root)
+    code = "def charge(amount):\n    retries = 3\n    return send(amount, retries)\n"
+    repo.write("src/pay.py", code).commit("feat: add charge with retries")
+    repo.move("src/pay.py", "src/payments/core.py")
+    repo.commit("refactor: move pay.py into the payments package")
+    repo.write("src/payments/core.py", code.replace("retries = 3", "retries = 5"))
+    repo.commit(
+        "fix(payments): raise retries to 5\n\n"
+        "We raised the limit because the card network times out under load (#7)."
+    )
+    repo.write("VERSION", "1.0.1\n").commit("chore: bump version")
+    return repo
+
+
 SCENARIOS: dict[str, Callable[[Path], RepoBuilder]] = {
+    "lineage": lineage,
     "payments": payments,
     "empty": empty,
     "unborn_with_changes": unborn_with_changes,

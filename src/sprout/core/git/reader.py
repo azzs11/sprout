@@ -51,6 +51,21 @@ def commit_patch(repo: pygit2.Repository, commit: pygit2.Commit, max_chars: int)
     return text if len(text) <= max_chars else text[:max_chars] + "\n[diff truncated]\n"
 
 
+def file_patch(repo: pygit2.Repository, commit: pygit2.Commit, path: str, max_chars: int) -> str:
+    """The part of ``commit``'s diff that touches ``path`` (new or old name)."""
+    if len(commit.parent_ids) > 1:
+        return ""
+    diff = _base_tree(repo, commit).diff_to_tree(commit.tree)
+    diff.find_similar()
+    for patch in diff:
+        if patch is None:
+            continue
+        if path in (patch.delta.new_file.path, patch.delta.old_file.path):
+            text = patch.data.decode("utf-8", errors="replace")
+            return text if len(text) <= max_chars else text[:max_chars] + "\n[diff truncated]\n"
+    return ""
+
+
 def _base_tree(repo: pygit2.Repository, commit: pygit2.Commit) -> pygit2.Tree:
     """First parent's tree, or the empty tree for a root commit."""
     if commit.parents:

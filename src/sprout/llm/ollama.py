@@ -29,6 +29,13 @@ class OllamaProvider:
         """Ollama runs locally."""
         return False
 
+    def available(self) -> bool:
+        """True if the server answers within half a second."""
+        try:
+            return self._client.get("/api/tags", timeout=0.5).is_success
+        except httpx.HTTPError:
+            return False
+
     def complete(self, *, system: str, prompt: str, max_tokens: int) -> str:
         """Return the model's reply."""
         body = {
