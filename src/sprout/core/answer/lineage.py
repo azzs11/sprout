@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import shutil
+import subprocess
+
 from sprout.core.answer.blame import BlameLine, blame_line
 from sprout.core.git.pygit2_repo import Pygit2Repo
 from sprout.models import ChangeKind, CommitRecord, Hunk, LineHop
 
 MAX_HOPS = 6
+MAX_LOG = 20
 
 
 def line_history(
@@ -44,6 +48,26 @@ def line_history(
         )
         target = None if introduced or hunk is None else _parent_target(blamed, hunk)
     return hops
+
+
+def line_log(
+    repo: Pygit2Repo, path: str, line: int, *, rev: str, limit: int = MAX_LOG
+) -> list[str]:
+    """``git log -L`` for one line: every commit that changed it, newest first.
+
+    The blame walk maps a line into each parent by offset, which can land on the wrong line
+    when a hunk is rewritten unevenly, and ``blame -C`` can credit a copy of generic text
+    elsewhere. ``git log -L`` tracks the line range itself, so its commits are kept too.
+    Returns ``[]`` when the git CLI is missing or the line cannot be traced.
+    """
+    if limit <= 0 or not shutil.which("git"):
+        return []
+    args = ["git", "-C", str(repo.root), "log", rev, f"-L{line},{line}:{path}", "--format=%H"]
+    args += ["-s", f"--max-count={limit}"]
+    done = subprocess.run(args, capture_output=True, check=False)  # noqa: S603 - fixed argv
+    if done.returncode != 0:
+        return []
+    return [h for h in done.stdout.decode().split() if len(h) == 40]
 
 
 def _covering_hunk(record: CommitRecord, blamed: BlameLine) -> Hunk | None:

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from sprout.core.answer import evidence as ev
 from sprout.core.answer.compose import Answerer, evidence_blocks, line_sentences, question_sentences
-from sprout.core.answer.lineage import MAX_HOPS, line_history
+from sprout.core.answer.lineage import MAX_HOPS, MAX_LOG, line_history, line_log
 from sprout.core.git.pygit2_repo import Pygit2Repo
 from sprout.core.index.embedder import Embedder
 from sprout.core.index.store import Store
@@ -25,6 +25,8 @@ class WhyOptions:
 
     limit: int = 8
     max_hops: int = MAX_HOPS
+    max_log: int = MAX_LOG  # commits taken from ``git log -L``
+    symbol_limit: int = ev.SYMBOL_LIMIT  # other commits to the enclosing function or class
 
 
 @dataclass(frozen=True)
@@ -54,12 +56,14 @@ def why_line(
     symbol = ev.enclosing_symbol(repo, as_of, path, line)
     found = ev.EvidenceSet(repo, store, as_of)
     ev.add_line_history(found, hops)
+    ev.add_line_log(found, repo, line_log(repo, path, line, rev=as_of, limit=options.max_log))
     notes: list[str] = []
     if store is None:
         notes.append(NO_INDEX_NOTE)
     else:
         if symbol:
-            ev.add_symbol_history(found, store, symbol, [path, *(h.path for h in hops)])
+            paths = [path, *(h.path for h in hops)]
+            ev.add_symbol_history(found, store, symbol, paths, options.symbol_limit)
         ev.add_reverts(found, store, repo)
         query = ev.line_query(symbol, hops[0].text if hops else "", path)
         notes += ev.add_related(
@@ -106,10 +110,9 @@ def why_question(
         limit=options.limit,
         embedder=models.embedder,
         reranker=models.reranker,
-        relevance_weight=3.0,
     )
     ev.add_reverts(found, store, repo)
-    evidence = found.ranked(options.limit)
+    evidence = found.ranked(options.limit, by_relevance=True)
     answer = WhyAnswer(
         target=question,
         as_of=as_of,

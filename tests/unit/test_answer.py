@@ -7,10 +7,12 @@ from collections.abc import Callable, Iterator
 import pytest
 
 from sprout.core.answer import blame as blame_module
+from sprout.core.answer import lineage as lineage_module
 from sprout.core.answer.blame import LineNotFoundError, blame_line, parse_porcelain
 from sprout.core.answer.citations import check, split_sentences
 from sprout.core.answer.compose import Answerer
-from sprout.core.answer.lineage import line_history
+from sprout.core.answer.evidence import EvidenceSet
+from sprout.core.answer.lineage import line_history, line_log
 from sprout.core.answer.rationale import score_message
 from sprout.core.answer.why import Models, why_line, why_question
 from sprout.core.git import open_repo
@@ -89,6 +91,38 @@ def test_line_history_follows_rename_to_origin(lineage: RepoBuilder) -> None:
     assert [h.path for h in hops] == ["src/payments/core.py", "src/pay.py"]
     assert [h.introduced for h in hops] == [False, True]
     assert hops[1].text.strip() == "retries = 3"
+
+
+def test_line_log_lists_every_commit_to_the_line(lineage: RepoBuilder) -> None:
+    repo = open_repo(lineage.root)
+    found = line_log(repo, "src/payments/core.py", RETRIES_LINE, rev=repo.resolve())
+    assert found[0] == _hash_of(lineage, "fix(payments)")
+    assert line_log(repo, "src/payments/core.py", RETRIES_LINE, rev=repo.resolve(), limit=0) == []
+    assert line_log(repo, "missing.py", 1, rev=repo.resolve()) == []
+
+
+def test_line_log_without_git_cli(lineage: RepoBuilder, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(lineage_module.shutil, "which", lambda _name: None)
+    repo = open_repo(lineage.root)
+    assert line_log(repo, "src/payments/core.py", RETRIES_LINE, rev=repo.resolve()) == []
+
+
+# ----- ranking -----------------------------------------------------------------------
+
+
+def test_relevance_leads_and_rationale_breaks_ties(lineage: RepoBuilder) -> None:
+    repo = open_repo(lineage.root)
+    fix = repo.commit(_hash_of(lineage, "fix(payments)"))
+    feat = repo.commit(_hash_of(lineage, "feat: add charge"))
+    found = EvidenceSet(repo, None, repo.resolve())
+    found.add(fix, EvidenceRole.RELATED, rank=2)
+    found.add(feat, EvidenceRole.RELATED, rank=1)
+    assert [e.commit.hash for e in found.ranked(5)] == [fix.hash, feat.hash]
+    assert [e.commit.hash for e in found.ranked(5, by_relevance=True)] == [feat.hash, fix.hash]
+    tied = EvidenceSet(repo, None, repo.resolve())
+    tied.add(feat, EvidenceRole.RELATED, rank=1)
+    tied.add(fix, EvidenceRole.RELATED, rank=1)
+    assert tied.ranked(5, by_relevance=True)[0].commit.hash == fix.hash
 
 
 # ----- rationale ---------------------------------------------------------------------
@@ -191,6 +225,13 @@ def test_why_line_retrieval_mode(lineage: RepoBuilder, indexed: Store) -> None:
     assert roles[fix] is EvidenceRole.LINE_ORIGIN
     cited = {h for s in answer.sentences for h in s.citations}
     assert cited <= {e.commit.hash for e in answer.evidence}
+
+
+def test_why_line_keeps_every_line_log_commit(lineage: RepoBuilder, indexed: Store) -> None:
+    repo = open_repo(lineage.root)
+    answer = why_line(repo, indexed, "src/payments/core.py", RETRIES_LINE)
+    logged = line_log(repo, "src/payments/core.py", RETRIES_LINE, rev=repo.resolve())
+    assert set(logged) <= {e.commit.hash for e in answer.evidence}
 
 
 def test_why_line_without_index_notes_it(lineage: RepoBuilder) -> None:

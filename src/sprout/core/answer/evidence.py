@@ -24,7 +24,7 @@ _ROLE_BONUS = {
     EvidenceRole.RELATED: -0.25,
 }
 _IDENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]{2,}")
-SYMBOL_LIMIT = 8
+SYMBOL_LIMIT = 4
 RELATED_LIMIT = 5
 
 
@@ -45,17 +45,25 @@ class EvidenceSet:
         self._store = store
         self._as_of = as_of
         self._items: dict[str, Evidence] = {}
+        self._rank: dict[str, float] = {}
 
-    def add(self, commit: Commit, role: EvidenceRole, *extra: str, bonus: float = 0.0) -> None:
-        """Add a commit unless it is already present or newer than ``as_of``."""
+    def add(
+        self, commit: Commit, role: EvidenceRole, *extra: str, rank: float | None = None
+    ) -> None:
+        """Add a commit unless it is already present or newer than ``as_of``.
+
+        ``rank`` is the commit's search rank (1 is best), used by ``ranked(by_relevance=True)``.
+        """
         if commit.hash in self._items or not self._repo.is_ancestor(commit.hash, self._as_of):
             return
+        if rank is not None:
+            self._rank[commit.hash] = rank
         info = parse_message(commit.message, is_merge=len(commit.parents) > 1)
         rationale = score_message(commit.message, labels=info.labels, refs=len(info.refs))
         self._items[commit.hash] = Evidence(
             commit=commit,
             role=role,
-            score=round(rationale.score + _ROLE_BONUS[role] + bonus, 3),
+            score=round(rationale.score + _ROLE_BONUS[role], 3),
             reasons=[*extra, *rationale.reasons],
             labels=info.labels,
             refs=info.refs,
@@ -71,9 +79,24 @@ class EvidenceSet:
         """The first evidence added with ``role``."""
         return next((e for e in self._items.values() if e.role is role), None)
 
-    def ranked(self, limit: int) -> list[Evidence]:
-        """Best evidence first."""
-        order = sorted(self._items.values(), key=lambda e: -e.score)
+    def rank_of(self, hash_: str) -> float | None:
+        """Search rank a commit was added with, if any."""
+        return self._rank.get(hash_)
+
+    def ranked(self, limit: int, *, by_relevance: bool = False) -> list[Evidence]:
+        """Best evidence first.
+
+        By default the rationale score decides. With ``by_relevance``, search rank leads and
+        the rationale score only breaks ties; commits without a rank come last.
+        """
+        if by_relevance:
+            last = float("inf")
+            order = sorted(
+                self._items.values(),
+                key=lambda e: (self._rank.get(e.commit.hash, last), -e.score),
+            )
+        else:
+            order = sorted(self._items.values(), key=lambda e: -e.score)
         return order[:limit]
 
     def _reverted_by(self, commit: Commit) -> list[str]:
@@ -103,8 +126,19 @@ def add_line_history(evidence: EvidenceSet, hops: list[LineHop]) -> None:
         evidence.add(hop.commit, role, note)
 
 
+def add_line_log(evidence: EvidenceSet, repo: Pygit2Repo, hashes: Iterable[str]) -> None:
+    """Commits from ``git log -L`` that the blame walk did not reach."""
+    for hash_ in hashes:
+        if repo.has_commit(hash_):
+            evidence.add(repo.commit(hash_), EvidenceRole.LINE_HISTORY, "changed this line earlier")
+
+
 def add_symbol_history(
-    evidence: EvidenceSet, store: Store, symbol: str, paths: Iterable[str]
+    evidence: EvidenceSet,
+    store: Store,
+    symbol: str,
+    paths: Iterable[str],
+    limit: int = SYMBOL_LIMIT,
 ) -> None:
     """Other commits that changed the same function or class."""
     names = list(dict.fromkeys(paths))
@@ -112,7 +146,7 @@ def add_symbol_history(
     rows = store.db.execute(
         "SELECT DISTINCT c.commit_json FROM symbols s JOIN commits c ON c.id = s.commit_id"  # noqa: S608
         f" WHERE s.name = ? AND s.path IN ({marks}) ORDER BY c.committed_at DESC LIMIT ?",
-        (symbol, *names, SYMBOL_LIMIT),
+        (symbol, *names, limit),
     ).fetchall()
     for row in rows:
         evidence.add(
@@ -121,10 +155,17 @@ def add_symbol_history(
 
 
 def add_reverts(evidence: EvidenceSet, store: Store, repo: Pygit2Repo) -> None:
-    """Reverts of the evidence so far, and the commits those reverts undid."""
+    """Reverts of the evidence so far, and the commits those reverts undid.
+
+    Each one inherits the search rank of the commit it is linked to, placed just after it.
+    """
     for hash_ in evidence.hashes():
+        rank = evidence.rank_of(hash_)
+        near = None if rank is None else rank + 0.5
         for revert in reverted_by(store, hash_, repo.commit(hash_).summary):
-            evidence.add(repo.commit(revert), EvidenceRole.REVERT, f"reverted {hash_[:7]}")
+            evidence.add(
+                repo.commit(revert), EvidenceRole.REVERT, f"reverted {hash_[:7]}", rank=near
+            )
         rows = store.db.execute(
             "SELECT r.target FROM reverts r JOIN commits c ON c.id = r.commit_id WHERE c.hash = ?",
             (hash_,),
@@ -132,7 +173,10 @@ def add_reverts(evidence: EvidenceSet, store: Store, repo: Pygit2Repo) -> None:
         for (target,) in rows:
             if repo.has_commit(str(target)):
                 evidence.add(
-                    repo.commit(str(target)), EvidenceRole.REVERT, f"was reverted by {hash_[:7]}"
+                    repo.commit(str(target)),
+                    EvidenceRole.REVERT,
+                    f"was reverted by {hash_[:7]}",
+                    rank=near,
                 )
 
 
@@ -144,21 +188,15 @@ def add_related(
     limit: int = RELATED_LIMIT,
     embedder: Embedder | None = None,
     reranker: Reranker | None = None,
-    relevance_weight: float = 0.0,
 ) -> list[str]:
-    """Commits found by searching the index; returns search notes.
-
-    With ``relevance_weight``, better-ranked hits get a larger score bonus, so for free-text
-    questions relevance outweighs how wordy a commit message is.
-    """
+    """Commits found by searching the index, with their search rank; returns search notes."""
     mode = SearchMode.HYBRID if embedder is not None else SearchMode.BM25
     results = search(store, query, mode=mode, limit=limit * 3, embedder=embedder, reranker=reranker)
     added = 0
     for hit in results.hits:
         before = len(evidence.hashes())
-        bonus = relevance_weight * max(0.0, 1.0 - 0.2 * (hit.rank - 1))
         evidence.add(
-            hit.commit, EvidenceRole.RELATED, f"matched the search (rank {hit.rank})", bonus=bonus
+            hit.commit, EvidenceRole.RELATED, f"matched the search (rank {hit.rank})", rank=hit.rank
         )
         added += len(evidence.hashes()) - before
         if added >= limit:
