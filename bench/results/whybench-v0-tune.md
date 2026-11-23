@@ -1,6 +1,6 @@
 # WhyBench v0 results (tune split)
 
-Generated 2026-11-23T04:40:17+00:00 by Sprout 0.1.0 (commit 7d5be24f4450, plus uncommitted changes). Models: {'embed': 'BAAI/bge-small-en-v1.5', 'rerank': 'Xenova/ms-marco-MiniLM-L-6-v2'}. No LLM was used (retrieval and ranking only).
+Generated 2026-11-23T04:55:39+00:00 by Sprout 0.1.0 (commit 228b7dd385ef). Models: {'embed': 'BAAI/bge-small-en-v1.5', 'rerank': 'Xenova/ms-marco-MiniLM-L-6-v2'}. No LLM was used (retrieval and ranking only).
 
 Repositories and snapshots: click `08b803cf32`, httpx `7cff5f79bc`, cobra `adbc881390`.
 
