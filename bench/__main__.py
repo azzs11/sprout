@@ -1,4 +1,4 @@
-"""WhyBench commands: ``uv run python -m bench <build|lines|candidates|run|speed>``."""
+"""WhyBench commands: ``uv run python -m bench <build|lines|candidates|run|speed|answers|faithfulness>``."""
 
 from __future__ import annotations
 
@@ -12,10 +12,19 @@ from typing import Annotated
 
 import typer
 
+from bench.whybench.answers import (
+    answer_task,
+    closed_book_task,
+    drop_counts,
+    summarise_closed_book,
+    summary_by_group,
+    write_answers_report,
+)
 from bench.whybench.common import (
     DATA_DIR,
     LOCK_FILE,
     RESULTS_DIR,
+    cache_dir,
     clone_and_pin,
     load_lock,
     load_specs,
@@ -31,10 +40,12 @@ from bench.whybench.evaluate import (
     merge,
     summary,
 )
-from bench.whybench.report import write_report
+from bench.whybench.faithfulness import sample_sentences, score_judgements, with_messages
+from bench.whybench.report import describe_commit, write_report
 from bench.whybench.select import line_tasks, question_candidates
 from bench.whybench.speed import summarise_timings, time_repo, write_speed_report
-from sprout import __version__
+from sprout import __version__, services
+from sprout.config import Settings
 from sprout.core.git import open_repo
 from sprout.core.index.embedder import DEFAULT_EMBED_MODEL, FastEmbedder
 from sprout.core.index.indexer import build_index
@@ -85,10 +96,12 @@ def build(repos: Repos = None, no_embed: bool = False, rebuild: bool = False) ->
 
 @app.command()
 def lines(repos: Repos = None, per_repo: int = 40) -> None:
-    """Generate line tasks from ``git log -L`` histories."""
+    """Generate line tasks from ``git log -L`` histories (replaces only the selected repos)."""
     lock = load_lock()
-    tasks: list[dict[str, object]] = []
-    for name in _selected(repos):
+    selected = _selected(repos)
+    # Keep other repositories' tasks, so adding a repository never rewrites existing ones.
+    tasks = [t for t in read_jsonl(DATA_DIR / "lines.jsonl") if t["repo"] not in selected]
+    for name in selected:
         found = line_tasks(repo_path(name), name, lock[name], target=per_repo, seed=_seed(name))
         typer.echo(f"{name}: {len(found)} line tasks")
         tasks += found
@@ -112,7 +125,7 @@ def candidates(repos: Repos = None, per_repo: int = 14, out: Path | None = None)
 
 @app.command()
 def run(
-    split: Annotated[str, typer.Option(help="test, tune or all")] = "test",
+    split: Annotated[str, typer.Option(help="test, tune, holdout or all")] = "test",
     no_models: bool = False,
 ) -> None:
     """Score every system and write bench/results/whybench-v0.{json,md}."""
@@ -160,7 +173,7 @@ def run(
 
 
 @app.command()
-def speed(split: Annotated[str, typer.Option(help="test, tune or all")] = "test") -> None:
+def speed(split: Annotated[str, typer.Option(help="test, tune, holdout or all")] = "test") -> None:
     """Time sprout why per task and write bench/results/whybench-v0-speed-<split>.{json,md}."""
     specs = [s for s in load_specs() if split == "all" or s.split == split]
     line_rows = read_jsonl(DATA_DIR / "lines.jsonl")
@@ -198,6 +211,94 @@ def speed(split: Annotated[str, typer.Option(help="test, tune or all")] = "test"
     (RESULTS_DIR / f"{stem}.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     write_speed_report(result, RESULTS_DIR / f"{stem}.md")
     typer.echo(f"wrote {RESULTS_DIR / stem}.json and .md")
+
+
+@app.command()
+def answers(
+    model: Annotated[str, typer.Option(help="Ollama model, e.g. qwen2.5-coder:3b")],
+    split: Annotated[str, typer.Option(help="test, tune, holdout or all")] = "tune",
+    per_repo: Annotated[int, typer.Option(help="Tasks per repo and kind (0 = all)")] = 0,
+    closed_book: Annotated[bool, typer.Option(help="Also run the no-history baseline")] = True,
+) -> None:
+    """Score model-written answers; writes bench/results/whybench-v0-answers-<split>.{json,md}."""
+    settings = Settings(llm_provider="ollama", llm_model=model)
+    answerer, note = services.build_answerer(settings)
+    if answerer is None:
+        raise typer.BadParameter(note or "no model available", param_hint="--model")
+    specs = [s for s in load_specs() if split == "all" or s.split == split]
+    tasks = read_jsonl(DATA_DIR / "lines.jsonl") + read_jsonl(DATA_DIR / "questions.jsonl")
+    embedder = FastEmbedder(DEFAULT_EMBED_MODEL, _models_dir())
+    reranker = FastReranker(DEFAULT_RERANK_MODEL, _models_dir())
+    records: list[dict[str, object]] = []
+    blind: list[dict[str, object]] = []
+    for spec in specs:
+        root = repo_path(spec.name)
+        with Store.open(root, create=False) as store:
+            ctx = Context(root, open_repo(root), store, embedder, reranker)
+            for kind in ("line", "question"):
+                mine = [t for t in tasks if t["repo"] == spec.name and t["kind"] == kind]
+                for task in mine[:per_repo] if per_repo else mine:
+                    records.append(answer_task(task, ctx, answerer))
+                    if closed_book:
+                        blind.append(closed_book_task(task, answerer.provider))
+        typer.echo(f"answered {spec.name}")
+    commit = _sprout_commit()
+    result: dict[str, object] = {
+        "benchmark": "whybench-v0-answers",
+        "split": split,
+        "per_repo": per_repo or None,
+        "date": datetime.now(UTC).isoformat(timespec="seconds"),
+        "sprout_version": __version__,
+        "sprout_commit": commit,
+        "sprout_commit_label": describe_commit(commit),
+        "model": answerer.model_id,
+        "machine": f"{platform.system()} {platform.machine()}, Python {platform.python_version()}",
+        "repos": {s.name: load_lock()[s.name] for s in specs},
+        "groups": summary_by_group(records),
+        "drops": drop_counts(records),
+        "closed_book": {
+            kind: summarise_closed_book([r for r in blind if (r["kind"] == "question") == q])
+            for kind, q in (("line", False), ("question", True))
+        }
+        if closed_book
+        else None,
+    }
+    stem = f"whybench-v0-answers-{split}"
+    detail = _answers_detail(split, model)
+    write_jsonl(detail, records)
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    (RESULTS_DIR / f"{stem}.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    write_answers_report(result, RESULTS_DIR / f"{stem}.md")
+    typer.echo(f"wrote {RESULTS_DIR / stem}.json and .md; per-task replies in {detail}")
+
+
+@app.command()
+def faithfulness(
+    model: Annotated[str, typer.Option(help="Model whose answers to sample")],
+    split: Annotated[str, typer.Option(help="test, tune or holdout")] = "test",
+    sample: Annotated[int, typer.Option(help="Sentences to sample")] = 60,
+) -> None:
+    """Export a judging sample, or score data/whybench-v0/faithfulness-<split>.jsonl once judged."""
+    judged_path = DATA_DIR / f"faithfulness-{split}.jsonl"
+    judged = read_jsonl(judged_path)
+    if judged:
+        stats = score_judgements(judged)
+        out = RESULTS_DIR / f"whybench-v0-faithfulness-{split}.json"
+        out.write_text(json.dumps(stats, indent=2) + "\n", encoding="utf-8")
+        typer.echo(f"{stats} -> {out}")
+        return
+    detail = _answers_detail(split, model)
+    rows = sample_sentences(read_jsonl(detail), sample, seed=_seed(f"faithfulness-{split}"))
+    roots = {s.name: repo_path(s.name) for s in load_specs()}
+    target = cache_dir() / f"faithfulness-{split}-to-judge.jsonl"
+    write_jsonl(target, with_messages(rows, roots))
+    typer.echo(f"{len(rows)} sentences to judge in {target}; save verdicts to {judged_path}")
+
+
+def _answers_detail(split: str, model: str) -> Path:
+    """Per-task answer records for one split and model (kept in the cache, not committed)."""
+    safe = model.replace(":", "_").replace("/", "_")
+    return cache_dir() / f"whybench-v0-answers-{split}-{safe}.jsonl"
 
 
 def _sprout_commit() -> str:

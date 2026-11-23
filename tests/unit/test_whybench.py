@@ -88,3 +88,54 @@ def test_speed_report_notes_uncommitted_changes(tmp_path: Path) -> None:
     text = (tmp_path / "speed.md").read_text()
     assert "plus uncommitted changes" in text
     assert "| **all** | line | 1 |" in text
+
+
+def test_closed_book_scores_memorised_hash_and_unsupported_reason() -> None:
+    from bench.whybench.answers import closed_book_task, summarise_closed_book
+    from tests.fakes import FakeProvider
+
+    task: dict[str, object] = {
+        "id": "x-q-000",
+        "kind": "question",
+        "repo": "x",
+        "question": "Why?",
+        "gold": ["abcdef1234" + "0" * 30],
+    }
+    hit = closed_book_task(task, FakeProvider(reply='{"commit": "ABCDEF1", "reason": "speed"}'))
+    miss = closed_book_task(task, FakeProvider(reply='{"commit": "abc", "reason": null}'))
+    broken = closed_book_task(task, FakeProvider(reply="no idea"))
+    assert (hit["cites_gold"], hit["asserts_reason"]) == (True, True)
+    assert (miss["cites_gold"], miss["names_commit"], miss["asserts_reason"]) == (
+        False,
+        False,
+        False,
+    )
+    assert broken["asserts_reason"] is False
+    assert summarise_closed_book([hit, miss, broken])["cites_gold"] == 0.333
+
+
+def test_faithfulness_sample_is_reproducible_and_scores_precision() -> None:
+    from bench.whybench.faithfulness import sample_sentences, score_judgements
+
+    records: list[dict[str, object]] = [
+        {
+            "id": f"r-{i}",
+            "repo": "x",
+            "kind": "line",
+            "sentences": ["a", "b"],
+            "citations": [["h1"], ["h2"]],
+        }
+        for i in range(5)
+    ]
+    first = sample_sentences(records, 4, seed=7)
+    assert first == sample_sentences(records, 4, seed=7)
+    assert len(first) == 4
+    assert {r["commit"] for r in first} <= {"h1", "h2"}
+    verdicts = ["supported", "supported", "partly", "unsupported", "skip"]
+    stats = score_judgements([{"verdict": v} for v in verdicts])
+    assert stats == {
+        "n": 4,
+        "citation_precision": 0.5,
+        "supported_or_partly": 0.75,
+        "unsupported_rate": 0.25,
+    }
