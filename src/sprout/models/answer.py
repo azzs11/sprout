@@ -69,6 +69,9 @@ class WhyAnswer(Model):
     model: str | None = Field(default=None, description="Provider and prompt, when mode is llm.")
     sentences: list[Sentence]
     dropped: int = Field(default=0, description="Model sentences removed by the citation check.")
+    drop_reasons: list[str] = Field(
+        default_factory=list, description="Why each dropped sentence failed, with its start."
+    )
     history: list[LineHop] = Field(default_factory=list[LineHop])
     evidence: list[Evidence]
     notes: list[str] = Field(default_factory=list)

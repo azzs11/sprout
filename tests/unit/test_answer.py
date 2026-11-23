@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
+import json
+from collections.abc import Callable, Iterator, Mapping
 
 import pytest
 
 from sprout.core.answer import blame as blame_module
 from sprout.core.answer import lineage as lineage_module
 from sprout.core.answer.blame import LineNotFoundError, blame_line, parse_porcelain
-from sprout.core.answer.citations import check, split_sentences
+from sprout.core.answer.citations import check, check_sentences, split_sentences
 from sprout.core.answer.compose import Answerer
 from sprout.core.answer.evidence import EvidenceSet
 from sprout.core.answer.lineage import line_history, line_log
@@ -190,12 +191,52 @@ def test_supported_sentence_is_kept() -> None:
             "Engineers preferred quantum blockchain scheduling heuristics [bbbbbbb].",
             "not supported",
         ),
+        ("related, 2024-01-02, Ann\nmessage:\nfeat: add charge with retries [bbbbbbb].", "copied"),
+        ("The line at this commit: feat: add charge with retries [bbbbbbb].", "copied"),
+        (
+            "Retries [aaaaaaa] [bbbbbbb] [aaaaaab] [aaaaaac] changed.",
+            "not in the evidence",
+        ),
     ],
 )
 def test_bad_sentences_are_dropped(text: str, reason: str) -> None:
     result = _check(text)
     assert result.kept == []
     assert reason in result.reasons[0]
+
+
+def test_mid_sentence_citation_stays_readable() -> None:
+    result = _check("The limit was raised in [aaaaaaa] because the card network times out.")
+    assert result.kept[0].text == (
+        "The limit was raised in aaaaaaa because the card network times out."
+    )
+    assert result.kept[0].citations == ["a" * 40]
+
+
+def test_leading_citation_is_removed_from_the_text() -> None:
+    result = _check("[aaaaaaa] Retries were raised because the card network times out.")
+    assert result.kept[0].text == "Retries were raised because the card network times out."
+    assert result.kept[0].citations == ["a" * 40]
+
+
+def test_too_many_citations_is_dropped() -> None:
+    many = {c * 40: "feat: add charge with retries" for c in "abcd"}
+    result = check(
+        "Retries were added for charges [aaaaaaa, bbbbbbb, ccccccc, ddddddd].",
+        many,
+        exists=lambda h: h in many,
+    )
+    assert result.reasons == ["cites too many commits: Retries were added for charges."]
+
+
+def test_composed_sentence_with_inner_full_stop_is_checked_whole() -> None:
+    sentence = (
+        'Its message says: "fix(payments): raise retries to 5. We raised the limit" [aaaaaaa].'
+    )
+    result = check_sentences([sentence], EVIDENCE, exists=lambda h: h in EVIDENCE)
+    assert result.dropped == 0
+    assert len(result.kept) == 1
+    assert check(sentence, EVIDENCE, exists=lambda h: h in EVIDENCE).dropped == 1
 
 
 def test_forged_hash_is_counted() -> None:
@@ -251,10 +292,15 @@ def test_why_at_old_revision_never_cites_the_future(lineage: RepoBuilder, indexe
 
 def test_why_with_model_keeps_checked_sentences(lineage: RepoBuilder, indexed: Store) -> None:
     fix = _hash_of(lineage, "fix(payments)")
-    provider = FakeProvider(
-        reply=f'Retries were raised to 5 "because the card network times out under load" [{fix[:7]}]. '
-        "It also improves the user interface dramatically [deadbee]."
-    )
+    reply = {
+        "main": {
+            "commit": fix[:7],
+            "what": "raised retries to 5",
+            "reason_quote": "because the card network times out under load",
+        },
+        "also": {"commit": "deadbee", "what": "improves the interface", "reason_quote": None},
+    }
+    provider = FakeProvider(reply=json.dumps(reply))
     answer = why_line(
         open_repo(lineage.root),
         indexed,
@@ -263,14 +309,21 @@ def test_why_with_model_keeps_checked_sentences(lineage: RepoBuilder, indexed: S
         models=Models(answerer=Answerer(provider)),
     )
     assert answer.mode is AnswerMode.LLM
-    assert answer.model == "fake:model|why_answer@1"
-    assert [s.citations for s in answer.sentences] == [[fix]]
-    assert answer.dropped == 1
+    assert answer.model == "fake:model|why_answer@3+why_line_answer@1+reasons@1"
+    assert [s.text for s in answer.sentences] == [
+        "Raised retries to 5.",
+        'Its message gives the reason: "because the card network times out under load".',
+    ]
+    assert [s.citations for s in answer.sentences] == [[fix], [fix]]
+    assert answer.dropped == 2
     assert any("outside the evidence" in n for n in answer.notes)
     assert "retries = 5" in provider.prompts[0]
+    schema = provider.schemas[0]
+    assert schema is not None
+    assert schema["properties"]["main"]["properties"]["commit"]["enum"] == [fix[:7]]  # type: ignore[index]
 
 
-def test_why_falls_back_when_every_sentence_fails(lineage: RepoBuilder, indexed: Store) -> None:
+def test_why_falls_back_when_the_reply_is_not_json(lineage: RepoBuilder, indexed: Store) -> None:
     provider = FakeProvider(reply="Because reasons.")
     answer = why_line(
         open_repo(lineage.root),
@@ -281,12 +334,36 @@ def test_why_falls_back_when_every_sentence_fails(lineage: RepoBuilder, indexed:
     )
     assert answer.mode is AnswerMode.RETRIEVAL
     assert answer.dropped == 1
+    assert answer.drop_reasons == ["unreadable reply: not the requested JSON"]
     assert answer.sentences
+
+
+def test_why_question_lets_the_model_pick(make_repo: MakeRepo) -> None:
+    built = make_repo("payments")
+    provider = FakeProvider(reply='{"picks": []}')
+    with Store.open(built.root, create=True) as store:
+        build_index(open_repo(built.root), store)
+        why_question(
+            open_repo(built.root),
+            store,
+            "why did we disable charge retries",
+            models=Models(answerer=Answerer(provider)),
+        )
+    schema = provider.schemas[0]
+    assert schema is not None
+    assert "picks" in schema["properties"]  # type: ignore[operator]
 
 
 def test_why_survives_model_errors(lineage: RepoBuilder, indexed: Store) -> None:
     class Broken(FakeProvider):
-        def complete(self, *, system: str, prompt: str, max_tokens: int) -> str:
+        def complete(
+            self,
+            *,
+            system: str,
+            prompt: str,
+            max_tokens: int,
+            schema: Mapping[str, object] | None = None,
+        ) -> str:
             raise ModelError("model is down")
 
     answer = why_line(

@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import math
 import re
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
 _WORD = re.compile(r"[a-z0-9]+")
@@ -64,11 +64,20 @@ class FakeProvider:
     reply: str = "Changes behaviour of the code."
     remote: bool = False
     prompts: list[str] = field(default_factory=list)
+    schemas: list[Mapping[str, object] | None] = field(default_factory=list)
 
     @property
     def name(self) -> str:
         return "fake:model"
 
-    def complete(self, *, system: str, prompt: str, max_tokens: int) -> str:
+    def complete(
+        self,
+        *,
+        system: str,
+        prompt: str,
+        max_tokens: int,
+        schema: Mapping[str, object] | None = None,
+    ) -> str:
         self.prompts.append(prompt)
+        self.schemas.append(schema)
         return f"  {self.reply}\n\n"

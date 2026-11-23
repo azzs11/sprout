@@ -81,6 +81,14 @@ def score_message(message: str, *, labels: list[Label], refs: int) -> RationaleS
     return RationaleScore(round(score, 3), reasons, excerpt, excerpt != sentence)
 
 
+def states_reason(text: str, *, strong: bool = False) -> bool:
+    """True when ``text`` contains a word that explains why (because, to avoid, fails, ...).
+
+    With ``strong``, only words that state a cause count (because, due to, to avoid, ...).
+    """
+    return bool(_STRONG.search(text) or (not strong and _WEAK.search(text)))
+
+
 def _reason_sentence(message: str) -> str | None:
     """The first sentence that contains a reason marker, else the body's first sentence."""
     sentences: list[str] = []

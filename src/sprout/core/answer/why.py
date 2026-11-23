@@ -138,7 +138,9 @@ def _with_llm(
         return answer
     blocks = evidence_blocks(repo, answer.evidence, path=path, hops=hops)
     try:
-        result = answerer.answer(question, context, blocks, repo=repo)
+        main = answer.evidence[0].commit.hash if path is not None else None
+        messages = {e.commit.hash: e.commit.message for e in answer.evidence}
+        result = answerer.answer(question, context, blocks, repo=repo, messages=messages, main=main)
     except ModelError as exc:
         return answer.model_copy(
             update={"notes": [*answer.notes, f"Showing facts only: {exc.message}"]}
@@ -148,13 +150,16 @@ def _with_llm(
         notes.append(f"Dropped {result.forged} citation(s) to commits outside the evidence.")
     if not result.kept:
         notes.append("The model's answer failed the citation check, so only facts are shown.")
-        return answer.model_copy(update={"dropped": result.dropped, "notes": notes})
+        return answer.model_copy(
+            update={"dropped": result.dropped, "drop_reasons": result.reasons, "notes": notes}
+        )
     return answer.model_copy(
         update={
             "mode": AnswerMode.LLM,
             "model": answerer.model_id,
             "sentences": result.kept,
             "dropped": result.dropped,
+            "drop_reasons": result.reasons,
             "notes": notes,
         }
     )

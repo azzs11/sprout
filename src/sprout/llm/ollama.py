@@ -5,6 +5,7 @@ from __future__ import annotations
 import httpx
 
 from sprout.errors import ModelError
+from sprout.llm.provider import JsonSchema
 
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
 DEFAULT_OLLAMA_MODEL = "qwen2.5-coder:7b"
@@ -36,9 +37,11 @@ class OllamaProvider:
         except httpx.HTTPError:
             return False
 
-    def complete(self, *, system: str, prompt: str, max_tokens: int) -> str:
-        """Return the model's reply."""
-        body = {
+    def complete(
+        self, *, system: str, prompt: str, max_tokens: int, schema: JsonSchema | None = None
+    ) -> str:
+        """Return the model's reply (JSON matching ``schema`` when one is given)."""
+        body: dict[str, object] = {
             "model": self._model,
             "stream": False,
             "messages": [
@@ -47,6 +50,8 @@ class OllamaProvider:
             ],
             "options": {"num_predict": max_tokens, "temperature": 0},
         }
+        if schema is not None:
+            body["format"] = dict(schema)
         try:
             response = self._client.post("/api/chat", json=body)
         except httpx.TransportError as exc:

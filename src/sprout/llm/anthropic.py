@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from sprout.errors import ModelError
+from sprout.llm.provider import JsonSchema
 
 if TYPE_CHECKING:
     import anthropic
@@ -40,9 +41,18 @@ class AnthropicProvider:
         """Calls go to Anthropic's API."""
         return True
 
-    def complete(self, *, system: str, prompt: str, max_tokens: int) -> str:
-        """Return Claude's reply, falling back server-side if a request is declined."""
+    def complete(
+        self, *, system: str, prompt: str, max_tokens: int, schema: JsonSchema | None = None
+    ) -> str:
+        """Return Claude's reply, falling back server-side if a request is declined.
+
+        With ``schema``, the reply is JSON constrained by structured outputs.
+        """
         import anthropic
+
+        output_config: dict[str, object] = {"effort": "low"}
+        if schema is not None:
+            output_config["format"] = {"type": "json_schema", "schema": dict(schema)}
 
         try:
             response = self._client.beta.messages.create(
@@ -50,7 +60,7 @@ class AnthropicProvider:
                 max_tokens=max_tokens,
                 system=system,
                 messages=[{"role": "user", "content": prompt}],
-                output_config={"effort": "low"},
+                output_config=output_config,  # type: ignore[arg-type]
                 betas=[_FALLBACK_BETA],
                 fallbacks="default",
             )

@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
-from sprout.core.answer.citations import CheckResult, check
+from collections.abc import Mapping
+
+from sprout.core.answer import structured
+from sprout.core.answer.citations import CheckResult, check_sentences
 from sprout.core.answer.rationale import RationaleScore, score_message
+from sprout.core.answer.reasons import GATE_ID
 from sprout.core.git.pygit2_repo import Pygit2Repo
 from sprout.core.redact import redact
 from sprout.llm.prompts import load_prompt
@@ -137,17 +141,22 @@ def evidence_blocks(
 
 
 class Answerer:
-    """Asks a model for a cited answer and keeps only sentences that pass the checks."""
+    """Asks a model to pick commits and quote reasons, then checks every composed sentence.
 
-    def __init__(self, provider: Provider, *, max_tokens: int = 2_048) -> None:
+    For a line, Sprout's top-ranked commit is fixed as the main commit (``main``) and the model
+    explains it; for a question, the model chooses from the evidence.
+    """
+
+    def __init__(self, provider: Provider, *, max_tokens: int = 600) -> None:
         self.provider = provider
         self.prompt = load_prompt("why_answer")
+        self.line_prompt = load_prompt("why_line_answer")
         self._max_tokens = max_tokens
 
     @property
     def model_id(self) -> str:
-        """Provider and prompt version, recorded with each answer."""
-        return f"{self.provider.name}|{self.prompt.id}"
+        """Provider and prompt versions, recorded with each answer."""
+        return f"{self.provider.name}|{self.prompt.id}+{self.line_prompt.id}+{GATE_ID}"
 
     def answer(
         self,
@@ -156,13 +165,36 @@ class Answerer:
         blocks: dict[str, str],
         *,
         repo: Pygit2Repo,
+        messages: Mapping[str, str],
+        main: str | None = None,
     ) -> CheckResult:
-        """Model answer, filtered by the citation checker."""
+        """Model answer, filtered by the reason gate and the citation checker.
+
+        ``messages`` maps each evidence commit's full hash to its message.
+        """
+        hashes = [h[:7] for h in blocks]
+        short_main = main[:7] if main and main[:7] in hashes else None
+        prompt = self.line_prompt if short_main else self.prompt
+        schema = (
+            structured.main_schema(short_main, hashes)
+            if short_main
+            else structured.pick_schema(hashes)
+        )
         reply = self.provider.complete(
-            system=self.prompt.system,
-            prompt=self.prompt.render(
-                question=question, context=context, evidence="\n\n".join(blocks.values())
+            system=prompt.system,
+            prompt=prompt.render(
+                question=question,
+                context=context,
+                evidence="\n\n".join(blocks.values()),
+                hashes=", ".join(hashes),
+                main=short_main or "",
             ),
             max_tokens=self._max_tokens,
+            schema=schema,
         )
-        return check(reply, blocks, exists=repo.has_commit)
+        picks = structured.parse_picks(reply)
+        if picks is None:
+            return CheckResult([], 1, 0, ["unreadable reply: not the requested JSON"])
+        by_short = {h[:7]: m for h, m in messages.items()}
+        sentences = structured.compose(picks, by_short)
+        return check_sentences(sentences, blocks, exists=repo.has_commit)
