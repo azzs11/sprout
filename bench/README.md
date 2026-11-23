@@ -52,6 +52,7 @@ No repository appears in both splits.
 uv run python -m bench build            # clone, pin and index (downloads ~150 MB of local models once)
 uv run python -m bench lines            # regenerate line tasks (deterministic per repo)
 uv run python -m bench run --split test # writes results/whybench-v0-test.{json,md}
+uv run python -m bench speed --split test # p50/p95 of sprout why per task -> results/whybench-v0-speed-test.{json,md}
 ```
 
 Clones live in the user cache directory, or in `SPROUT_BENCH_CACHE` if set.

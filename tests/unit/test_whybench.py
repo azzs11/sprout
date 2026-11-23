@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from pathlib import Path
 
 import pytest
 
 from bench.whybench.metrics import ndcg_at, recall_at, reciprocal_rank, score, summarise
 from bench.whybench.select import CommitInfo, is_rationale_commit, line_tasks, source_files
+from bench.whybench.speed import percentile, summarise_timings, write_speed_report
 from tests.fixtures.builder import RepoBuilder
 
 MakeRepo = Callable[[str], RepoBuilder]
@@ -52,3 +54,37 @@ def test_source_files_skip_tests(make_repo: MakeRepo) -> None:
     built = make_repo("lineage")
     built.write("tests/test_core.py", "def test_x():\n    assert True\n").commit("test: add")
     assert source_files(built.root, built.head()) == ["src/payments/core.py"]
+
+
+def test_percentile_nearest_rank() -> None:
+    values = [0.1 * i for i in range(1, 21)]
+    assert percentile(values, 50) == pytest.approx(1.0)
+    assert percentile(values, 95) == pytest.approx(1.9)
+    assert percentile([], 50) == 0.0
+
+
+def test_summarise_timings_in_milliseconds() -> None:
+    assert summarise_timings([0.01, 0.02, 0.03]) == {
+        "n": 3,
+        "p50_ms": 20.0,
+        "p95_ms": 30.0,
+        "max_ms": 30.0,
+    }
+
+
+def test_speed_report_notes_uncommitted_changes(tmp_path: Path) -> None:
+    timing = {"line": {"n": 1, "p50_ms": 1.0, "p95_ms": 1.0, "max_ms": 1.0}}
+    result: dict[str, object] = {
+        "split": "tune",
+        "date": "2026-11-23",
+        "sprout_version": "0.1.0",
+        "sprout_commit": "a" * 40 + "-dirty",
+        "machine": "test",
+        "models": {},
+        "repos": {"click": timing},
+        "all": timing,
+    }
+    write_speed_report(result, tmp_path / "speed.md")
+    text = (tmp_path / "speed.md").read_text()
+    assert "plus uncommitted changes" in text
+    assert "| **all** | line | 1 |" in text

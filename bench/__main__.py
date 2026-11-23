@@ -1,8 +1,9 @@
-"""WhyBench commands: ``uv run python -m bench <build|lines|candidates|run>``."""
+"""WhyBench commands: ``uv run python -m bench <build|lines|candidates|run|speed>``."""
 
 from __future__ import annotations
 
 import json
+import platform
 import subprocess
 import zlib
 from datetime import UTC, datetime
@@ -32,6 +33,7 @@ from bench.whybench.evaluate import (
 )
 from bench.whybench.report import write_report
 from bench.whybench.select import line_tasks, question_candidates
+from bench.whybench.speed import summarise_timings, time_repo, write_speed_report
 from sprout import __version__
 from sprout.core.git import open_repo
 from sprout.core.index.embedder import DEFAULT_EMBED_MODEL, FastEmbedder
@@ -154,6 +156,47 @@ def run(
     stem = f"whybench-v0-{split}"
     (RESULTS_DIR / f"{stem}.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     write_report(result, RESULTS_DIR / f"{stem}.md")
+    typer.echo(f"wrote {RESULTS_DIR / stem}.json and .md")
+
+
+@app.command()
+def speed(split: Annotated[str, typer.Option(help="test, tune or all")] = "test") -> None:
+    """Time sprout why per task and write bench/results/whybench-v0-speed-<split>.{json,md}."""
+    specs = [s for s in load_specs() if split == "all" or s.split == split]
+    line_rows = read_jsonl(DATA_DIR / "lines.jsonl")
+    question_rows = read_jsonl(DATA_DIR / "questions.jsonl")
+    embedder = FastEmbedder(DEFAULT_EMBED_MODEL, _models_dir())
+    reranker = FastReranker(DEFAULT_RERANK_MODEL, _models_dir())
+    per_repo: dict[str, dict[str, dict[str, float]]] = {}
+    pooled: dict[str, list[float]] = {"line": [], "question": []}
+    for spec in specs:
+        root = repo_path(spec.name)
+        with Store.open(root, create=False) as store:
+            ctx = Context(root, open_repo(root), store, embedder, reranker)
+            timings = time_repo(
+                [t for t in line_rows if t["repo"] == spec.name],
+                [t for t in question_rows if t["repo"] == spec.name],
+                ctx,
+            )
+        per_repo[spec.name] = {k: summarise_timings(v) for k, v in timings.items()}
+        for kind, values in timings.items():
+            pooled[kind] += values
+        typer.echo(f"timed {spec.name}")
+    result: dict[str, object] = {
+        "benchmark": "whybench-v0-speed",
+        "split": split,
+        "date": datetime.now(UTC).isoformat(timespec="seconds"),
+        "sprout_version": __version__,
+        "sprout_commit": _sprout_commit(),
+        "machine": f"{platform.system()} {platform.machine()}, Python {platform.python_version()}",
+        "models": {"embed": DEFAULT_EMBED_MODEL, "rerank": DEFAULT_RERANK_MODEL},
+        "repos": per_repo,
+        "all": {k: summarise_timings(v) for k, v in pooled.items()},
+    }
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    stem = f"whybench-v0-speed-{split}"
+    (RESULTS_DIR / f"{stem}.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    write_speed_report(result, RESULTS_DIR / f"{stem}.md")
     typer.echo(f"wrote {RESULTS_DIR / stem}.json and .md")
 
 
