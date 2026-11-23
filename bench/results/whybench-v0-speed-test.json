@@ -1,0 +1,140 @@
+{
+  "benchmark": "whybench-v0-speed",
+  "split": "test",
+  "date": "2026-11-23T05:02:16+00:00",
+  "sprout_version": "0.1.0",
+  "sprout_commit": "68e7f7da83f9e0425eb4a575347fc6d5c49de84c",
+  "machine": "Darwin arm64, Python 3.11.18",
+  "models": {
+    "embed": "BAAI/bge-small-en-v1.5",
+    "rerank": "Xenova/ms-marco-MiniLM-L-6-v2"
+  },
+  "repos": {
+    "requests": {
+      "line": {
+        "n": 26,
+        "p50_ms": 99.4,
+        "p95_ms": 178.5,
+        "max_ms": 182.5
+      },
+      "question": {
+        "n": 12,
+        "p50_ms": 329.9,
+        "p95_ms": 660.7,
+        "max_ms": 660.7
+      }
+    },
+    "flask": {
+      "line": {
+        "n": 18,
+        "p50_ms": 197.3,
+        "p95_ms": 388.5,
+        "max_ms": 388.5
+      },
+      "question": {
+        "n": 11,
+        "p50_ms": 316.4,
+        "p95_ms": 586.7,
+        "max_ms": 586.7
+      }
+    },
+    "attrs": {
+      "line": {
+        "n": 19,
+        "p50_ms": 88.9,
+        "p95_ms": 229.5,
+        "max_ms": 229.5
+      },
+      "question": {
+        "n": 11,
+        "p50_ms": 727.6,
+        "p95_ms": 750.0,
+        "max_ms": 750.0
+      }
+    },
+    "express": {
+      "line": {
+        "n": 4,
+        "p50_ms": 217.8,
+        "p95_ms": 270.6,
+        "max_ms": 270.6
+      },
+      "question": {
+        "n": 7,
+        "p50_ms": 335.6,
+        "p95_ms": 389.9,
+        "max_ms": 389.9
+      }
+    },
+    "axios": {
+      "line": {
+        "n": 40,
+        "p50_ms": 158.1,
+        "p95_ms": 468.2,
+        "max_ms": 646.1
+      },
+      "question": {
+        "n": 12,
+        "p50_ms": 788.1,
+        "p95_ms": 1151.4,
+        "max_ms": 1151.4
+      }
+    },
+    "gin": {
+      "line": {
+        "n": 18,
+        "p50_ms": 95.6,
+        "p95_ms": 185.6,
+        "max_ms": 185.6
+      },
+      "question": {
+        "n": 12,
+        "p50_ms": 696.8,
+        "p95_ms": 1140.9,
+        "max_ms": 1140.9
+      }
+    },
+    "ripgrep": {
+      "line": {
+        "n": 40,
+        "p50_ms": 273.5,
+        "p95_ms": 341.2,
+        "max_ms": 402.3
+      },
+      "question": {
+        "n": 11,
+        "p50_ms": 702.4,
+        "p95_ms": 1076.5,
+        "max_ms": 1076.5
+      }
+    },
+    "pytest": {
+      "line": {
+        "n": 40,
+        "p50_ms": 505.7,
+        "p95_ms": 923.7,
+        "max_ms": 1130.7
+      },
+      "question": {
+        "n": 11,
+        "p50_ms": 886.7,
+        "p95_ms": 1184.4,
+        "max_ms": 1184.4
+      }
+    }
+  },
+  "all": {
+    "line": {
+      "n": 205,
+      "p50_ms": 198.3,
+      "p95_ms": 615.2,
+      "max_ms": 1130.7
+    },
+    "question": {
+      "n": 87,
+      "p50_ms": 663.0,
+      "p95_ms": 1076.5,
+      "max_ms": 1184.4
+    }
+  }
+}
