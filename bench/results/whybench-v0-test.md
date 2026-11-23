@@ -1,6 +1,6 @@
 # WhyBench v0 results (test split)
 
-Generated 2026-11-23T04:54:16+00:00 by Sprout 0.1.0 (commit 228b7dd385ef). Models: {'embed': 'BAAI/bge-small-en-v1.5', 'rerank': 'Xenova/ms-marco-MiniLM-L-6-v2'}. No LLM was used (retrieval and ranking only).
+Generated 2026-11-23T04:54:16+00:00 by Sprout 0.1.0 (commit d65de1ed05e5). Models: {'embed': 'BAAI/bge-small-en-v1.5', 'rerank': 'Xenova/ms-marco-MiniLM-L-6-v2'}. No LLM was used (retrieval and ranking only).
 
 Repositories and snapshots: requests `3c7baaa05a`, flask `49943b5a94`, attrs `f830e60f9c`, express `43fca52d28`, axios `9f0f4ddfe7`, gin `0f09c3a9b4`, ripgrep `0856f3971e`, pytest `7189292654`.
 

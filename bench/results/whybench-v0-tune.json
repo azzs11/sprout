@@ -3,7 +3,7 @@
   "split": "tune",
   "date": "2026-11-23T04:55:39+00:00",
   "sprout_version": "0.1.0",
-  "sprout_commit": "228b7dd385ef5e41ced22572e8376ba2d28661c7",
+  "sprout_commit": "d65de1ed05e573b29c73ab9221dbdd0c08e384d7",
   "models": {
     "embed": "BAAI/bge-small-en-v1.5",
     "rerank": "Xenova/ms-marco-MiniLM-L-6-v2"
