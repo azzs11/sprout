@@ -61,7 +61,7 @@ For a line, it ranks them by how clearly each message states a reason. For a fre
 
 **Facts-only mode:** without a language model (or with `--no-llm`), the answer is built only from quoted commit messages.
 
-**With a local Ollama model** (or Claude, if you opt in), the model writes the answer, but a checker keeps only sentences that cite commits from the evidence. Quoted words must appear in the cited commit, and the rest of the sentence must be supported by it.
+**With a local Ollama model** (or Claude, if you opt in), the model fills in a short form instead of writing free text: which commits matter, what each one changed, and the reason copied word for word from its message. Sprout writes the sentences from that form. A reason is kept only if it comes from the commit message and states a cause, not just the subject line. A final checker drops any sentence whose commit is not in the evidence or whose words the commit does not support.
 
 `--at` answers as of an older commit and never cites anything newer.
 
@@ -69,14 +69,23 @@ For a line, it ranks them by how clearly each message states a reason. For a fre
 
 ### Measured: WhyBench v0
 
-[WhyBench](bench/README.md) asks which commit explains a line or answers a "why" question. The correct answer for each is a commit whose message states a reason. The benchmark covers 205 line questions and 87 natural-language questions from 8 open-source repositories that were not used during development. From [`bench/results/whybench-v0-test.md`](bench/results/whybench-v0-test.md):
+[WhyBench](bench/README.md) asks which commit explains a line or answers a "why" question. The correct answer for each is a commit whose message states a reason. The headline numbers below come from the **holdout** split: 139 line questions and 44 natural-language questions from 4 repositories (werkzeug, koa, chi, regex) that were added after the method was frozen and run once. From [`bench/results/whybench-v0-holdout.md`](bench/results/whybench-v0-holdout.md):
 
-| Line questions, correct commit ranked first | All (205) | Buried behind later edits (109) |
+| Line questions, correct commit ranked first | All (139) | Buried behind later edits (50) |
 |---|---|---|
-| `git blame` | 0.459 | 0.064 |
-| `sprout why` | **0.717** | **0.560** |
+| `git blame` | 0.590 | 0.040 |
+| `sprout why` | **0.770** | **0.660** |
 
-Part of this lead comes from how the benchmark is built: the correct commit is chosen from `git log -L` by looking for causal words, and `sprout why` uses `git log -L` and also rewards causal words. On natural-language questions, `sprout why` currently ranks exactly as hybrid search with reranking does (0.839 first, 0.977 in the top five), so it adds nothing there yet. The benchmark card lists the other baselines and the known biases.
+Part of this lead comes from how the benchmark is built: the correct commit is chosen from `git log -L` by looking for causal words, and `sprout why` uses `git log -L` and also rewards causal words. On natural-language questions, `sprout why` ranks exactly as hybrid search with reranking does (0.705 first, 0.864 in the top five), so it adds nothing there yet. The 8-repository test split shows the same pattern ([`whybench-v0-test.md`](bench/results/whybench-v0-test.md)).
+
+**Written answers** with `qwen2.5-coder:7b` running locally ([`whybench-v0-answers-holdout.md`](bench/results/whybench-v0-answers-holdout.md), [`whybench-v0-faithfulness-holdout.json`](bench/results/whybench-v0-faithfulness-holdout.json)):
+
+| Holdout | Lines | Questions |
+|---|---|---|
+| a kept sentence cites the correct commit | 0.856 | 0.864 |
+| the same model with no git history cites it | 0.0 | 0.0 |
+
+Of 60 sampled kept sentences, 0.767 are fully supported by the commit they cite (0.933 at least partly). Without history, the model never names the right commit but still gives a reason for 47% of lines and 96% of questions. The benchmark card lists the other baselines, the judging method and the known biases.
 
 Everything below is planned and not built yet.
 

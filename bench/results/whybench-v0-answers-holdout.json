@@ -1,0 +1,71 @@
+{
+  "benchmark": "whybench-v0-answers",
+  "split": "holdout",
+  "per_repo": null,
+  "date": "2026-11-23T12:14:41+00:00",
+  "sprout_version": "0.1.0",
+  "sprout_commit": "b404b3043de30708f00213fc738790385f0a822f-dirty",
+  "sprout_commit_label": "b404b3043de3, plus uncommitted changes",
+  "model": "ollama:qwen2.5-coder:7b|why_answer@3+why_line_answer@1+reasons@1",
+  "machine": "Darwin arm64, Python 3.11.18",
+  "repos": {
+    "werkzeug": "0f43c6ebd426039e4b99ec22535c2c8a2ec2f69f",
+    "koa": "a0702b923eee7e7473ae0f49aacc82759817bc1d",
+    "chi": "c64ed7d6635f33a8b2feaff7dcfa55677023ac7d",
+    "regex": "fde4946d4a3cb367338a21493ec91ec7106a12b4"
+  },
+  "groups": {
+    "line": {
+      "n": 139,
+      "answer_rate": 0.993,
+      "sentence_survival": 0.92,
+      "cites_gold": 0.856,
+      "cites_gold_when_in_evidence": 0.902,
+      "mean_seconds": 15.15
+    },
+    "line, direct": {
+      "n": 89,
+      "answer_rate": 1.0,
+      "sentence_survival": 0.966,
+      "cites_gold": 0.955,
+      "cites_gold_when_in_evidence": 0.955,
+      "mean_seconds": 14.22
+    },
+    "line, buried": {
+      "n": 50,
+      "answer_rate": 0.98,
+      "sentence_survival": 0.836,
+      "cites_gold": 0.68,
+      "cites_gold_when_in_evidence": 0.791,
+      "mean_seconds": 16.8
+    },
+    "question": {
+      "n": 44,
+      "answer_rate": 1.0,
+      "sentence_survival": 0.973,
+      "cites_gold": 0.864,
+      "cites_gold_when_in_evidence": 0.927,
+      "mean_seconds": 13.11
+    }
+  },
+  "drops": {
+    "not supported by the cited commits": 32,
+    "quote not found in the cited commits": 11,
+    "unreadable reply": 1,
+    "copied evidence, not prose": 1
+  },
+  "closed_book": {
+    "line": {
+      "n": 139,
+      "cites_gold": 0.0,
+      "names_a_commit": 0.0,
+      "asserts_a_reason": 0.468
+    },
+    "question": {
+      "n": 44,
+      "cites_gold": 0.0,
+      "names_a_commit": 0.045,
+      "asserts_a_reason": 0.955
+    }
+  }
+}

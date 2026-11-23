@@ -1,0 +1,320 @@
+{
+  "benchmark": "whybench-v0",
+  "split": "holdout",
+  "date": "2026-11-23T11:11:07+00:00",
+  "sprout_version": "0.1.0",
+  "sprout_commit": "b404b3043de30708f00213fc738790385f0a822f-dirty",
+  "models": {
+    "embed": "BAAI/bge-small-en-v1.5",
+    "rerank": "Xenova/ms-marco-MiniLM-L-6-v2"
+  },
+  "llm": null,
+  "repos": {
+    "werkzeug": "0f43c6ebd426039e4b99ec22535c2c8a2ec2f69f",
+    "koa": "a0702b923eee7e7473ae0f49aacc82759817bc1d",
+    "chi": "c64ed7d6635f33a8b2feaff7dcfa55677023ac7d",
+    "regex": "fde4946d4a3cb367338a21493ec91ec7106a12b4"
+  },
+  "line": {
+    "git blame": {
+      "all": {
+        "recall@1": 0.5899,
+        "recall@5": 0.5899,
+        "recall@10": 0.5899,
+        "mrr@10": 0.5899,
+        "ndcg@10": 0.5899,
+        "n": 139
+      },
+      "direct": {
+        "recall@1": 0.8989,
+        "recall@5": 0.8989,
+        "recall@10": 0.8989,
+        "mrr@10": 0.8989,
+        "ndcg@10": 0.8989,
+        "n": 89
+      },
+      "buried": {
+        "recall@1": 0.04,
+        "recall@5": 0.04,
+        "recall@10": 0.04,
+        "mrr@10": 0.04,
+        "ndcg@10": 0.04,
+        "n": 50
+      }
+    },
+    "git log -L order": {
+      "all": {
+        "recall@1": 0.6403,
+        "recall@5": 0.8921,
+        "recall@10": 0.9424,
+        "mrr@10": 0.74,
+        "ndcg@10": 0.7891,
+        "n": 139
+      },
+      "direct": {
+        "recall@1": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "mrr@10": 1.0,
+        "ndcg@10": 1.0,
+        "n": 89
+      },
+      "buried": {
+        "recall@1": 0.0,
+        "recall@5": 0.7,
+        "recall@10": 0.84,
+        "mrr@10": 0.2771,
+        "ndcg@10": 0.4137,
+        "n": 50
+      }
+    },
+    "git log -S (pickaxe)": {
+      "all": {
+        "recall@1": 0.554,
+        "recall@5": 0.5612,
+        "recall@10": 0.5683,
+        "mrr@10": 0.5586,
+        "ndcg@10": 0.5609,
+        "n": 139
+      },
+      "direct": {
+        "recall@1": 0.8427,
+        "recall@5": 0.8539,
+        "recall@10": 0.8539,
+        "mrr@10": 0.8483,
+        "ndcg@10": 0.8498,
+        "n": 89
+      },
+      "buried": {
+        "recall@1": 0.04,
+        "recall@5": 0.04,
+        "recall@10": 0.06,
+        "mrr@10": 0.0429,
+        "ndcg@10": 0.0467,
+        "n": 50
+      }
+    },
+    "bm25": {
+      "all": {
+        "recall@1": 0.295,
+        "recall@5": 0.5612,
+        "recall@10": 0.6259,
+        "mrr@10": 0.4048,
+        "ndcg@10": 0.4584,
+        "n": 139
+      },
+      "direct": {
+        "recall@1": 0.427,
+        "recall@5": 0.6966,
+        "recall@10": 0.7303,
+        "mrr@10": 0.5347,
+        "ndcg@10": 0.5828,
+        "n": 89
+      },
+      "buried": {
+        "recall@1": 0.06,
+        "recall@5": 0.32,
+        "recall@10": 0.44,
+        "mrr@10": 0.1737,
+        "ndcg@10": 0.2372,
+        "n": 50
+      }
+    },
+    "hybrid": {
+      "all": {
+        "recall@1": 0.1727,
+        "recall@5": 0.3309,
+        "recall@10": 0.4676,
+        "mrr@10": 0.2515,
+        "ndcg@10": 0.3017,
+        "n": 139
+      },
+      "direct": {
+        "recall@1": 0.2584,
+        "recall@5": 0.4607,
+        "recall@10": 0.5843,
+        "mrr@10": 0.3534,
+        "ndcg@10": 0.4076,
+        "n": 89
+      },
+      "buried": {
+        "recall@1": 0.02,
+        "recall@5": 0.1,
+        "recall@10": 0.26,
+        "mrr@10": 0.0702,
+        "ndcg@10": 0.1132,
+        "n": 50
+      }
+    },
+    "hybrid + rerank": {
+      "all": {
+        "recall@1": 0.2662,
+        "recall@5": 0.4604,
+        "recall@10": 0.5612,
+        "mrr@10": 0.3486,
+        "ndcg@10": 0.3988,
+        "n": 139
+      },
+      "direct": {
+        "recall@1": 0.382,
+        "recall@5": 0.573,
+        "recall@10": 0.6854,
+        "mrr@10": 0.4668,
+        "ndcg@10": 0.5184,
+        "n": 89
+      },
+      "buried": {
+        "recall@1": 0.06,
+        "recall@5": 0.26,
+        "recall@10": 0.34,
+        "mrr@10": 0.1381,
+        "ndcg@10": 0.1859,
+        "n": 50
+      }
+    },
+    "sprout why": {
+      "all": {
+        "recall@1": 0.7698,
+        "recall@5": 0.9353,
+        "recall@10": 0.9496,
+        "mrr@10": 0.8402,
+        "ndcg@10": 0.8676,
+        "n": 139
+      },
+      "direct": {
+        "recall@1": 0.8315,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "mrr@10": 0.9036,
+        "ndcg@10": 0.9282,
+        "n": 89
+      },
+      "buried": {
+        "recall@1": 0.66,
+        "recall@5": 0.82,
+        "recall@10": 0.86,
+        "mrr@10": 0.7273,
+        "ndcg@10": 0.7597,
+        "n": 50
+      }
+    },
+    "sprout why, no rationale ranking": {
+      "all": {
+        "recall@1": 0.5899,
+        "recall@5": 0.8993,
+        "recall@10": 0.9424,
+        "mrr@10": 0.711,
+        "ndcg@10": 0.7677,
+        "n": 139
+      },
+      "direct": {
+        "recall@1": 0.8989,
+        "recall@5": 0.9888,
+        "recall@10": 1.0,
+        "mrr@10": 0.9321,
+        "ndcg@10": 0.9487,
+        "n": 89
+      },
+      "buried": {
+        "recall@1": 0.04,
+        "recall@5": 0.74,
+        "recall@10": 0.84,
+        "mrr@10": 0.3174,
+        "ndcg@10": 0.4457,
+        "n": 50
+      }
+    }
+  },
+  "question": {
+    "bm25": {
+      "all": {
+        "recall@1": 0.5,
+        "recall@5": 0.7273,
+        "recall@10": 0.7955,
+        "mrr@10": 0.5943,
+        "ndcg@10": 0.6427,
+        "n": 44
+      },
+      "question": {
+        "recall@1": 0.5,
+        "recall@5": 0.7273,
+        "recall@10": 0.7955,
+        "mrr@10": 0.5943,
+        "ndcg@10": 0.6427,
+        "n": 44
+      }
+    },
+    "vector": {
+      "all": {
+        "recall@1": 0.5455,
+        "recall@5": 0.75,
+        "recall@10": 0.8182,
+        "mrr@10": 0.6338,
+        "ndcg@10": 0.6782,
+        "n": 44
+      },
+      "question": {
+        "recall@1": 0.5455,
+        "recall@5": 0.75,
+        "recall@10": 0.8182,
+        "mrr@10": 0.6338,
+        "ndcg@10": 0.6782,
+        "n": 44
+      }
+    },
+    "hybrid": {
+      "all": {
+        "recall@1": 0.6818,
+        "recall@5": 0.8636,
+        "recall@10": 0.9318,
+        "mrr@10": 0.7656,
+        "ndcg@10": 0.8059,
+        "n": 44
+      },
+      "question": {
+        "recall@1": 0.6818,
+        "recall@5": 0.8636,
+        "recall@10": 0.9318,
+        "mrr@10": 0.7656,
+        "ndcg@10": 0.8059,
+        "n": 44
+      }
+    },
+    "hybrid + rerank": {
+      "all": {
+        "recall@1": 0.7045,
+        "recall@5": 0.8636,
+        "recall@10": 0.9318,
+        "mrr@10": 0.7792,
+        "ndcg@10": 0.8161,
+        "n": 44
+      },
+      "question": {
+        "recall@1": 0.7045,
+        "recall@5": 0.8636,
+        "recall@10": 0.9318,
+        "mrr@10": 0.7792,
+        "ndcg@10": 0.8161,
+        "n": 44
+      }
+    },
+    "sprout why": {
+      "all": {
+        "recall@1": 0.7045,
+        "recall@5": 0.8636,
+        "recall@10": 0.9318,
+        "mrr@10": 0.7792,
+        "ndcg@10": 0.8161,
+        "n": 44
+      },
+      "question": {
+        "recall@1": 0.7045,
+        "recall@5": 0.8636,
+        "recall@10": 0.9318,
+        "mrr@10": 0.7792,
+        "ndcg@10": 0.8161,
+        "n": 44
+      }
+    }
+  }
+}

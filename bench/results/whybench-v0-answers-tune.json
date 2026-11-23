@@ -1,0 +1,55 @@
+{
+  "benchmark": "whybench-v0-answers",
+  "split": "tune",
+  "per_repo": null,
+  "date": "2026-11-23T09:19:52+00:00",
+  "sprout_version": "0.1.0",
+  "sprout_commit": "b404b3043de30708f00213fc738790385f0a822f-dirty",
+  "sprout_commit_label": "b404b3043de3, plus uncommitted changes",
+  "model": "ollama:qwen2.5-coder:7b|why_answer@3+why_line_answer@1+reasons@1",
+  "machine": "Darwin arm64, Python 3.11.18",
+  "repos": {
+    "click": "08b803cf32ceb2ae6a772c62d5da42757a897d44",
+    "httpx": "7cff5f79bc78649bbcd3fd9aa7a74c86e0f63016",
+    "cobra": "adbc8813901bba65827259daa8e22ff94ec1f30e"
+  },
+  "groups": {
+    "line": {
+      "n": 61,
+      "answer_rate": 1.0,
+      "sentence_survival": 0.897,
+      "cites_gold": 0.967,
+      "cites_gold_when_in_evidence": 0.983,
+      "mean_seconds": 14.59
+    },
+    "line, direct": {
+      "n": 41,
+      "answer_rate": 1.0,
+      "sentence_survival": 0.882,
+      "cites_gold": 0.976,
+      "cites_gold_when_in_evidence": 0.976,
+      "mean_seconds": 14.11
+    },
+    "line, buried": {
+      "n": 20,
+      "answer_rate": 1.0,
+      "sentence_survival": 0.93,
+      "cites_gold": 0.95,
+      "cites_gold_when_in_evidence": 1.0,
+      "mean_seconds": 15.57
+    },
+    "question": {
+      "n": 34,
+      "answer_rate": 1.0,
+      "sentence_survival": 0.991,
+      "cites_gold": 0.882,
+      "cites_gold_when_in_evidence": 1.0,
+      "mean_seconds": 10.55
+    }
+  },
+  "drops": {
+    "not supported by the cited commits": 23,
+    "quote not found in the cited commits": 1
+  },
+  "closed_book": null
+}

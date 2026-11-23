@@ -1,0 +1,74 @@
+{
+  "benchmark": "whybench-v0-answers",
+  "split": "test",
+  "per_repo": null,
+  "date": "2026-11-23T08:55:42+00:00",
+  "sprout_version": "0.1.0",
+  "sprout_commit": "b404b3043de30708f00213fc738790385f0a822f-dirty",
+  "sprout_commit_label": "b404b3043de3, plus uncommitted changes",
+  "model": "ollama:qwen2.5-coder:7b|why_answer@3+why_line_answer@1",
+  "machine": "Darwin arm64, Python 3.11.18",
+  "repos": {
+    "requests": "3c7baaa05ab4aa49cc819ce3a819d260de19c157",
+    "flask": "49943b5a94413a530761350f04e896f76e8d620e",
+    "attrs": "f830e60f9c6485aa7037a52f03fdd28428dfbfc4",
+    "express": "43fca52d28a422c8be48fd489cbd4f2d6152bab6",
+    "axios": "9f0f4ddfe72b4c06afafe1a658e6ee53d35b5760",
+    "gin": "0f09c3a9b4626d9fe9979cf4d0521d6ae32ab646",
+    "ripgrep": "0856f3971e9f0bd987282dfec64494e9e03e860d",
+    "pytest": "718929265449ca33040264152ba5e7022e766a52"
+  },
+  "groups": {
+    "line": {
+      "n": 205,
+      "answer_rate": 0.971,
+      "sentence_survival": 0.922,
+      "cites_gold": 0.78,
+      "cites_gold_when_in_evidence": 0.792,
+      "mean_seconds": 17.01
+    },
+    "line, direct": {
+      "n": 96,
+      "answer_rate": 1.0,
+      "sentence_survival": 0.964,
+      "cites_gold": 0.979,
+      "cites_gold_when_in_evidence": 0.979,
+      "mean_seconds": 17.21
+    },
+    "line, buried": {
+      "n": 109,
+      "answer_rate": 0.945,
+      "sentence_survival": 0.885,
+      "cites_gold": 0.606,
+      "cites_gold_when_in_evidence": 0.623,
+      "mean_seconds": 16.83
+    },
+    "question": {
+      "n": 87,
+      "answer_rate": 1.0,
+      "sentence_survival": 0.964,
+      "cites_gold": 0.977,
+      "cites_gold_when_in_evidence": 1.0,
+      "mean_seconds": 12.19
+    }
+  },
+  "drops": {
+    "quote not found in the cited commits": 43,
+    "not supported by the cited commits": 31,
+    "unreadable reply": 1
+  },
+  "closed_book": {
+    "line": {
+      "n": 205,
+      "cites_gold": 0.0,
+      "names_a_commit": 0.0,
+      "asserts_a_reason": 0.405
+    },
+    "question": {
+      "n": 87,
+      "cites_gold": 0.0,
+      "names_a_commit": 0.241,
+      "asserts_a_reason": 0.966
+    }
+  }
+}
