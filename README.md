@@ -53,10 +53,11 @@ sprout why src/app.py:42 --at v1.2 --json           # as of an older version, fo
 
 **For a line,** Sprout works out which commits explain it, newest first:
 - it walks the line's history with `git blame`, following moved, renamed and re-indented code;
-- it adds the other commits that changed the same function or class;
+- it adds every commit `git log -L` finds for the line, in case the blame walk lost the trail;
+- it adds the most recent commits that changed the same function or class;
 - it adds reverts and related commits from the index.
 
-It ranks them by how clearly each message states a reason, and prints an answer with the commit hash behind every sentence.
+For a line, it ranks them by how clearly each message states a reason. For a free-text question, search relevance comes first and the stated reason only breaks ties. It then prints an answer with the commit hash behind every sentence.
 
 **Facts-only mode:** without a language model (or with `--no-llm`), the answer is built only from quoted commit messages.
 
@@ -73,9 +74,9 @@ It ranks them by how clearly each message states a reason, and prints an answer 
 | Line questions, correct commit ranked first | All (205) | Buried behind later edits (109) |
 |---|---|---|
 | `git blame` | 0.459 | 0.064 |
-| `sprout why` | **0.605** | **0.376** |
+| `sprout why` | **0.717** | **0.560** |
 
-On natural-language questions, plain hybrid search with reranking currently ranks the right commit first more often than `sprout why` does (0.839 vs 0.759). The benchmark card lists this, the other baselines and the known biases.
+Part of this lead comes from how the benchmark is built: the correct commit is chosen from `git log -L` by looking for causal words, and `sprout why` uses `git log -L` and also rewards causal words. On natural-language questions, `sprout why` currently ranks exactly as hybrid search with reranking does (0.839 first, 0.977 in the top five), so it adds nothing there yet. The benchmark card lists the other baselines and the known biases.
 
 Everything below is planned and not built yet.
 

@@ -37,7 +37,7 @@ No repository appears in both splits.
 | `git log -L` order | the line's history, newest first | none |
 | `git log -S` (pickaxe) | commits that added or removed the exact line text | none |
 | BM25 / vector / hybrid / hybrid + rerank | Sprout's index queried with the line's symbol, identifiers and file name | the question text |
-| `sprout why` | blame walk + function history + reverts + related commits, ranked by stated rationale | hybrid + rerank + reverts, ranked |
+| `sprout why` | blame walk + `git log -L` + function history + reverts + related commits, ranked by stated rationale | hybrid + rerank + reverts, relevance first, rationale breaks ties |
 | `sprout why`, no rationale ranking | ablation: the same evidence in history order | none |
 
 **Metrics:** Recall@1, Recall@5, MRR@10 and nDCG@10 for the gold commit.
@@ -64,6 +64,16 @@ The natural-language questions in `data/whybench-v0/questions.jsonl` were writte
 
 - **Gold labels are incomplete.** A reason can live in an issue, a pull request or a commit that does not use one of the connectives. Those commits are never gold, so a tool can be "wrong" while showing a genuinely helpful commit.
 - **The gold rule favours some systems.** It selects messages with explicit causal words, and Sprout's ranking also rewards explicit reasons, so it is favoured by construction. The `no rationale ranking` ablation shows how much of its score comes from that ranking.
+- **Sprout now reads the reference history too.** Since 2026-11-23, `sprout why` adds every commit from `git log -L` for the line (blame's offset mapping lost the trail on unevenly rewritten hunks). The gold commit is the newest reason-stating commit in that same history. So, for line tasks, `sprout why` is close to rebuilding the gold rule with a softer causal-word scorer. Read its line recall as "how well it ranks the right commit from the line's history", not as evidence that it discovers commits `git log -L` cannot find.
 - **Questions are written from the gold commits.** They may be easier or more literal than real developer questions.
 - **Projects are well known.** Pre-trained models may have seen these projects. Retrieval systems are less affected than LLM answers, and a post-cutoff slice is planned for v1.
 - **Small scale.** About 40 line tasks per repository and about 12 questions per repository. Treat differences of a few points as noise.
+
+## Tuning protocol
+
+Ranking choices are made on the **tune** split only (61 line tasks and 34 questions from `click`, `httpx` and `cobra`). The test split is then run once per change, and both before and after numbers are kept in the commit history of `results/`. Changes so far:
+
+| Date | Change | Chosen on tune because |
+|---|---|---|
+| 2026-11-23 | Questions: search relevance leads, rationale only breaks ties | the old rationale bonus never beat pure relevance on tune (R@1 0.529 either way) and let wordy commits outrank the best hit |
+| 2026-11-23 | Lines: add every `git log -L` commit (up to 20); cap function history at 4 commits | tune line R@5 0.853 → 0.984, buried R@1 0.50 → 0.80; cap 4 tied cap 0 and beat 8 |
