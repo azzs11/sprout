@@ -1,6 +1,7 @@
 # WhyBench v0 source repositories. All permissively licensed; cloned at build time and pinned
 # to the commit recorded in data/whybench-v0/repos.lock.json.
 # split = "tune": may be looked at while developing Sprout. split = "test": reported numbers only.
+# split = "holdout": added 2026-11-23 after the answer method was frozen; run once, never tuned on.
 
 [[repo]]
 name = "click"
@@ -78,3 +79,31 @@ url = "https://github.com/pytest-dev/pytest.git"
 license = "MIT"
 language = "python"
 split = "test"
+
+[[repo]]
+name = "werkzeug"
+url = "https://github.com/pallets/werkzeug.git"
+license = "BSD-3-Clause"
+language = "python"
+split = "holdout"
+
+[[repo]]
+name = "koa"
+url = "https://github.com/koajs/koa.git"
+license = "MIT"
+language = "javascript"
+split = "holdout"
+
+[[repo]]
+name = "chi"
+url = "https://github.com/go-chi/chi.git"
+license = "MIT"
+language = "go"
+split = "holdout"
+
+[[repo]]
+name = "regex"
+url = "https://github.com/rust-lang/regex.git"
+license = "MIT OR Apache-2.0"
+language = "rust"
+split = "holdout"
