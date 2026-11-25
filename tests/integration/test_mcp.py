@@ -258,3 +258,13 @@ def test_http_server(make_repo: MakeRepo) -> None:
     finally:
         proc.terminate()
         proc.wait(timeout=10)
+
+
+def test_why_shows_unchecked_message_body_without_calling_it_a_reason(session: Session) -> None:
+    # Found by asking Claude Code through this server: the body held the real context but no
+    # causal word, so the agent was told nothing about it.
+    error, text = call(session, "why", {"target": "src/payments.py:5"})
+    assert not error, text
+    assert "clearest stated reason" not in text
+    assert "Basis: no commit message states a reason Sprout's check accepts." in text
+    assert 'message (not checked as a reason): "The card network drops ~1% of requests."' in text

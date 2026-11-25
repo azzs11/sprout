@@ -6,7 +6,7 @@ into ``git show``.
 
 from __future__ import annotations
 
-from sprout.core.answer.reasons import vet_reason
+from sprout.core.answer.reasons import has_body, vet_reason
 from sprout.models import (
     AnswerMode,
     ChangedFile,
@@ -23,6 +23,7 @@ HASH = 12
 MAX_CHARS = 6_000  # about 1,500 tokens
 _SUMMARY = 100
 _QUOTE = 240
+_BODIES = 3  # unchecked message bodies shown, for the top commits only
 _ROLES = {
     "line_origin": "last changed this line",
     "line_history": "earlier change to this line",
@@ -48,10 +49,12 @@ def why_text(answer: WhyAnswer) -> str:
         lines.append("- No history found for this target.")
     quotes = [_quote(e) for e in answer.evidence]
     lines += ["", f"Basis: {_basis(quotes)}", "", "Commits:"]
-    for e, quote in zip(answer.evidence, quotes, strict=True):
+    for i, (e, quote) in enumerate(zip(answer.evidence, quotes, strict=True)):
         lines.append(_commit_line(e))
         if quote:
             lines.append(f'    reason: "{quote}"')
+        elif i < _BODIES and (body := _body(e.commit.message)):
+            lines.append(f'    message (not checked as a reason): "{body}"')
     lines += [f"Note: {n}" for n in answer.notes]
     return fit(lines)
 
@@ -125,7 +128,17 @@ def _basis(quotes: list[str | None]) -> str:
         return "the top commit's message states the reason (quoted below)."
     if any(quotes):
         return "only related commits state a reason; the top commit does not."
-    return "no commit message states a reason. This shows what changed, not why; don't guess."
+    return (
+        "no commit message states a reason Sprout's check accepts. Message text is shown as"
+        " written: quote it, but don't call it the reason unless it says so, and don't guess."
+    )
+
+
+def _body(message: str) -> str | None:
+    """The message after its subject line, clipped, when it says anything besides trailers."""
+    if not has_body(message):
+        return None
+    return _clip(message.strip().partition("\n")[2], _QUOTE)
 
 
 def _quote(e: Evidence) -> str | None:
