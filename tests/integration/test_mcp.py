@@ -20,9 +20,11 @@ from sprout import services
 from sprout.cli.app import app
 from sprout.cli.mcp import _is_loopback  # pyright: ignore[reportPrivateUsage]
 from sprout.config import Settings
+from sprout.core.risk import acks
 from sprout.mcp.format import MAX_CHARS, fit
 from sprout.mcp.server import build_server
 from sprout.mcp.session import Session
+from sprout.models import Ack, AckKind
 from tests.fakes import FakeEmbedder, FakeReranker
 from tests.fixtures.builder import RepoBuilder
 
@@ -67,7 +69,7 @@ def test_lists_read_only_tools(session: Session) -> None:
             return (await client.list_tools()).tools
 
     tools = {t.name: t for t in asyncio.run(run())}
-    assert set(tools) == {"why", "search_history", "explain_commit"}
+    assert set(tools) == {"why", "search_history", "explain_commit", "check_edit"}
     assert all(t.annotations and t.annotations.read_only_hint for t in tools.values())
     assert tools["why"].input_schema["required"] == ["target"]
 
@@ -164,7 +166,7 @@ def test_stdio_server_starts(make_repo: MakeRepo) -> None:
             return names, result.content[0].text  # type: ignore[union-attr]
 
     names, text = asyncio.run(run())
-    assert names == {"why", "search_history", "explain_commit"}
+    assert names == {"why", "search_history", "explain_commit", "check_edit"}
     assert "Basis: the top commit's message states the reason" in text
 
 
@@ -268,3 +270,84 @@ def test_why_shows_unchecked_message_body_without_calling_it_a_reason(session: S
     assert "clearest stated reason" not in text
     assert "Basis: no commit message states a reason Sprout's check accepts." in text
     assert 'message (not checked as a reason): "The card network drops ~1% of requests."' in text
+
+
+# ----- check_edit -----------------------------------------------------------------------
+
+
+def test_check_edit_stops_a_reapplied_revert(session: Session) -> None:
+    error, text = call(
+        session,
+        "check_edit",
+        {"path": "src/payments.py", "old": "    RETRIES = 3", "new": "    RETRIES = 0"},
+    )
+    assert not error, text
+    assert text.startswith("check_edit: STOP (level: high; risk@2, no model;")
+    assert "1 past commit warns" in text
+    assert "re-applies code that this revert removed (2 of 2 lines):" in text
+    assert "    +RETRIES = 0" in text
+    assert "  it reverted " in text
+    assert text.splitlines()[-1].startswith("What to do: stop and ask the user")
+
+
+def test_check_edit_review_suggests_reading_the_commit(session: Session) -> None:
+    error, text = call(
+        session,
+        "check_edit",
+        {"path": "src/payments.py", "old": "    RETRIES = 3", "new": "    RETRIES = 4"},
+    )
+    assert not error, text
+    assert text.startswith("check_edit: REVIEW (level: review;")
+    assert "removes code that this revert restored" in text
+    assert "What to do: read the cited commit with explain_commit." in text
+
+
+def test_check_edit_whole_file_diff_and_uncommitted(session: Session) -> None:
+    root = session.repo.root
+    undone = "def verify_token(token):\n    return token.startswith('t_')\n"
+    _, whole = call(session, "check_edit", {"path": str(root / "src/auth.py"), "new": undone})
+    assert whole.startswith("check_edit: STOP")
+    assert "security" in whole
+    diff = "--- a/src/payments.py\n+++ b/src/payments.py\n@@ -2 +2 @@\n-    RETRIES = 3\n+    RETRIES = 0\n"
+    _, from_diff = call(session, "check_edit", {"diff": diff})
+    assert from_diff.startswith("check_edit: STOP")
+    path = root / "src/payments.py"
+    path.write_text(path.read_text().replace("RETRIES = 3", "RETRIES = 0"))
+    _, uncommitted = call(session, "check_edit", {})
+    assert uncommitted.startswith("check_edit: STOP")
+
+
+def test_check_edit_proceeds_and_honours_acks(session: Session) -> None:
+    _, text = call(session, "check_edit", {"path": "README.md", "old": "# shop", "new": "# Shop"})
+    assert text.startswith("check_edit: PROCEED (risk@2, no model). None of the")
+    root = session.repo.root
+    revert = subprocess.run(
+        ["git", "-C", str(root), "log", "-1", "--format=%H", "--grep=^Revert"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    acks.save(
+        root, [Ack(commit=revert, kind=AckKind.ACK, reason="ok", by="Ada", date="2026-11-25")]
+    )
+    _, acked = call(
+        session,
+        "check_edit",
+        {"path": "src/payments.py", "old": "    RETRIES = 3", "new": "    RETRIES = 0"},
+    )
+    assert acked.startswith("check_edit: PROCEED")
+    assert "Note: 1 finding hidden by .sprout-acks.toml." in acked
+
+
+def test_check_edit_errors(session: Session, make_repo: MakeRepo) -> None:
+    error, text = call(session, "check_edit", {"path": "src/payments.py"})
+    assert error
+    assert "Fix: Pass path and new" in text
+    error, text = call(session, "check_edit", {"path": "/etc/hosts", "new": "x"})
+    assert error
+    assert "outside the repository" in text
+    plain = Session(make_repo("linear").root, OFFLINE)
+    error, text = call(plain, "check_edit", {})
+    plain.close()
+    assert error
+    assert "Fix: Build it with: sprout index" in text

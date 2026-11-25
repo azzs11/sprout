@@ -20,7 +20,9 @@ INSTRUCTIONS = """\
 Sprout answers "why is this code like this?" from this repository's git history.
 Call `why` with path:line before changing code you did not write, especially before removing
 a check, retry, timeout or workaround: it shows the commits behind the line, quotes the
-stated reason, and flags reverts. Use `explain_commit` to read one of those commits and
+stated reason, and flags reverts. Before an edit that removes or rewrites existing code, call
+`check_edit` with the path, old and new text: it returns proceed, review or stop, citing past
+fixes and reverts the edit would undo. Use `explain_commit` to read a cited commit and
 `search_history` to find commits by topic. Cite the commit hashes these tools return. If
 they say no commit states a reason, say that instead of guessing.
 """
@@ -66,6 +68,26 @@ def build_server(session: Session) -> MCPServer:
     ) -> str:
         """Show one commit: its stated reason, files and functions changed, reverts, and diff."""
         return _run(lambda: fmt.commit_text(session.explain(commit)))
+
+    @server.tool(annotations=_READ_ONLY)
+    def check_edit(
+        path: Annotated[
+            str | None, Field(description="File to edit (relative to the repo root or absolute).")
+        ] = None,
+        old: Annotated[
+            str | None, Field(description="Text being replaced; omit to replace the whole file.")
+        ] = None,
+        new: Annotated[str | None, Field(description="The new text (required with path).")] = None,
+        diff: Annotated[
+            str | None, Field(description="A unified diff to check instead of path/old/new.")
+        ] = None,
+    ) -> str:
+        """Before changing code: does history warn against it? Returns proceed, review or stop.
+
+        With no arguments, checks the uncommitted changes. Cites the fix, security or revert
+        commits the change runs into. Deterministic, no model.
+        """
+        return _run(lambda: fmt.risk_text(session.check(path=path, old=old, new=new, diff=diff)))
 
     return server
 

@@ -18,8 +18,12 @@ from sprout.core.answer.why import Models, WhyOptions
 from sprout.core.git import open_repo
 from sprout.core.index.store import Store
 from sprout.core.retrieve.hybrid import search
-from sprout.errors import IndexNotFoundError
-from sprout.models import CommitExplanation, SearchResults, WhyAnswer
+from sprout.core.risk import acks
+from sprout.core.risk.check import check_changes
+from sprout.core.risk.edits import file_edit_lines
+from sprout.core.risk.patch import parse_unified
+from sprout.errors import IndexNotFoundError, SproutError
+from sprout.models import CommitExplanation, RiskCard, SearchResults, WhyAnswer
 
 
 class Session:
@@ -71,6 +75,31 @@ class Session:
         """Explain one commit; revert links need the index."""
         with self.lock:
             return explain_commit(self.repo, self._open_store(), rev)
+
+    def check(
+        self, *, path: str | None, old: str | None, new: str | None, diff: str | None
+    ) -> RiskCard:
+        """Check a proposed edit, a unified diff, or (with neither) the uncommitted changes.
+
+        Raises:
+            SproutError: ``new`` is missing for an edit, or there is no index yet.
+        """
+        if path is not None and new is None:
+            raise SproutError(
+                "check_edit needs new for a path.",
+                hint="Pass path and new (and old for a partial edit), or a unified diff.",
+            )
+        with self.lock:  # pygit2 is used from one worker thread at a time
+            if diff is not None:
+                changed = parse_unified(diff)
+            elif path is not None and new is not None:
+                changed = file_edit_lines(self.repo, path, old, new)
+            else:
+                changed = self.repo.uncommitted_lines(staged_only=False)
+            store = self._open_store()
+            if store is None:
+                raise IndexNotFoundError(str(self.repo.root))
+            return check_changes(store, changed, ignore=acks.ignored(self.repo.root))
 
     def close(self) -> None:
         """Close the index."""

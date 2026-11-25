@@ -14,6 +14,9 @@ from sprout.models import (
     Evidence,
     IssueRef,
     Label,
+    RiskCard,
+    RiskFinding,
+    RiskKind,
     SearchHit,
     SearchResults,
     WhyAnswer,
@@ -108,6 +111,56 @@ def _file_line(f: ChangedFile) -> str:
     where = f" in {', '.join(f.symbols[:4])}" if f.symbols else ""
     size = "binary" if f.binary else f"+{f.additions} -{f.deletions}"
     return f"  {f.kind.value} {name} {size}{where}"
+
+
+_KINDS = {
+    RiskKind.REAPPLIES_REVERTED: "re-applies code that this revert removed",
+    RiskKind.REINTRODUCES_FIXED: "re-adds lines that this fix removed",
+    RiskKind.REMOVES_FIX: "removes lines that this fix added",
+    RiskKind.REMOVES_RESTORED: "removes code that this revert restored",
+}
+
+
+def risk_text(card: RiskCard) -> str:
+    """Render a ``RiskCard`` as a verdict an agent can act on and quote."""
+    if not card.findings:
+        lines = [
+            f"check_edit: PROCEED ({card.method}, no model). None of the {card.checked_lines}"
+            " changed lines match a past fix, revert or security commit."
+        ]
+        return fit(lines + [f"Note: {note}" for note in card.notes])
+    n = len(card.findings)
+    lines = [
+        f"check_edit: {card.verdict.value.upper()} (level: {card.level.value}; {card.method},"
+        " no model; the level says what the change undoes, not how sure Sprout is)."
+        f" {n} past commit{'s' if n > 1 else ''} warn{'' if n > 1 else 's'} against this change:",
+    ]
+    for f in card.findings[:5]:
+        lines += _finding_lines(f)
+    lines += [f"Note: {note}" for note in card.notes]
+    lines.append(
+        "What to do: read the cited commit with explain_commit. If you still make the change,"
+        " tell the user which past fix or revert it undoes, and why that is fine now."
+        if card.verdict.value == "review"
+        else "What to do: stop and ask the user before making this change; cite the commits above."
+    )
+    return fit(lines)
+
+
+def _finding_lines(f: RiskFinding) -> list[str]:
+    c = f.commit
+    tags = "".join(f"; {label.value}" for label in f.labels if label is not Label.MERGE)
+    out = [
+        f"- {c.hash[:HASH]} {c.authored_at:%Y-%m-%d} {c.author.name}: {_clip(c.summary, _SUMMARY)}"
+        f" ({f.level.value}{tags})",
+        f"  {_KINDS[f.kind]} ({f.matched} of {f.total} lines):",
+        *(f"    {example}" for example in f.examples),
+    ]
+    if f.reverts:
+        out.append("  it reverted " + ", ".join(h[:HASH] for h in f.reverts))
+    if f.reason:
+        out.append(f'  reason: "{_clip(f.reason, _QUOTE)}"')
+    return out
 
 
 def fit(lines: list[str], limit: int = MAX_CHARS) -> str:
