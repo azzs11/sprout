@@ -12,6 +12,7 @@ from rich.console import Console
 from rich.text import Text
 
 from sprout.cli.output import JsonOption, RepoOption, emit, handle_errors
+from sprout.cli.risk_markdown import card_markdown
 from sprout.core.git import open_repo
 from sprout.core.index.store import Store
 from sprout.core.risk import acks
@@ -48,6 +49,10 @@ def risk(
     strict: Annotated[
         bool, typer.Option("--strict", help="Exit 2 on any warning, not only on security fixes.")
     ] = False,
+    markdown: Annotated[
+        bool,
+        typer.Option("--markdown", help="Print a pull request comment (nothing if no findings)."),
+    ] = False,
     as_json: JsonOption = False,
 ) -> None:
     """Check uncommitted changes against past fixes, reverts and security commits."""
@@ -64,7 +69,10 @@ def risk(
         with Store.open(git.root, create=False) as store:
             ignore = frozenset(a.commit for a in acks.load(git.root))
             card = at_level(check_changes(store, changed, ignore=ignore), level)
-        emit(card, as_json=as_json, render=render_card)
+        if markdown and not as_json:
+            typer.echo(card_markdown(card), nl=False)
+        else:
+            emit(card, as_json=as_json, render=render_card)
     if blocks(card, strict=strict):
         raise typer.Exit(code=BLOCKED)
 
