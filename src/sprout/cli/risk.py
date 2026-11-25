@@ -16,7 +16,7 @@ from sprout.core.git import open_repo
 from sprout.core.index.store import Store
 from sprout.core.risk.check import check_changes
 from sprout.core.risk.patch import parse_unified
-from sprout.models import Label, RiskCard, RiskFinding, RiskKind, RiskLevel
+from sprout.models import Label, RiskCard, RiskFinding, RiskKind, RiskLevel, Verdict
 
 BLOCKED = 2
 _LEVEL = {
@@ -41,6 +41,9 @@ def risk(
         Path | None,
         typer.Option("--diff", help="Check a unified diff file instead ('-' reads stdin)."),
     ] = None,
+    level: Annotated[
+        RiskLevel, typer.Option(help="Lowest level to show: review (default) or high.")
+    ] = RiskLevel.REVIEW,
     strict: Annotated[
         bool, typer.Option("--strict", help="Exit 2 on any warning, not only on security fixes.")
     ] = False,
@@ -58,10 +61,29 @@ def risk(
             text = sys.stdin.read() if str(diff) == "-" else diff.read_text(encoding="utf-8")
             changed = parse_unified(text)
         with Store.open(git.root, create=False) as store:
-            card = check_changes(store, changed)
+            card = at_level(check_changes(store, changed), level)
         emit(card, as_json=as_json, render=render_card)
     if blocks(card, strict=strict):
         raise typer.Exit(code=BLOCKED)
+
+
+def at_level(card: RiskCard, level: RiskLevel) -> RiskCard:
+    """Keep findings at ``level`` or above; the card's level follows what is kept."""
+    if level is not RiskLevel.HIGH:
+        return card
+    kept = [f for f in card.findings if f.level is RiskLevel.HIGH]
+    if len(kept) == len(card.findings):
+        return card
+    hidden = len(card.findings) - len(kept)
+    note = f"{hidden} review-level finding{'s' if hidden > 1 else ''} hidden by --level high."
+    return card.model_copy(
+        update={
+            "findings": kept,
+            "level": RiskLevel.HIGH if kept else RiskLevel.LOW,
+            "verdict": card.verdict if kept else Verdict.PROCEED,
+            "notes": [*card.notes, note],
+        }
+    )
 
 
 def blocks(card: RiskCard, *, strict: bool) -> bool:
@@ -75,6 +97,8 @@ def render_card(card: RiskCard, out: Console) -> None:
     """Render a ``RiskCard``: the level as a word, then 1-3 explaining commits."""
     if not card.checked_lines:
         out.print("No changed lines to check.")
+    elif not card.findings and any("hidden by --level" in n for n in card.notes):
+        out.print(f"{_LEVEL[RiskLevel.LOW]}: no high-level findings.")
     elif not card.findings:
         out.print(
             f"{_LEVEL[RiskLevel.LOW]}: none of the {card.checked_lines} changed lines match a past"

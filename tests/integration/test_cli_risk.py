@@ -98,3 +98,15 @@ def test_unrelated_change_is_low(shop: RepoBuilder) -> None:
     code, output = run("risk", "-C", str(shop.root))
     assert code == 0
     assert output.startswith("✓ low: none of the 1 changed lines match")
+
+
+def test_level_high_hides_review_findings_and_says_so(shop: RepoBuilder) -> None:
+    path = shop.root / "src/payments.py"
+    path.write_text(path.read_text().replace("RETRIES = 3", "RETRIES = 4"))
+    assert card("-C", str(shop.root))["level"] == "review"
+    got = card("-C", str(shop.root), "--level", "high")
+    assert (got["level"], got["verdict"], got["findings"]) == ("low", "proceed", [])
+    assert got["notes"] == ["1 review-level finding hidden by --level high."]
+    code, output = run("risk", "-C", str(shop.root), "--level", "high")
+    assert code == 0
+    assert output.startswith("✓ low: no high-level findings.")
