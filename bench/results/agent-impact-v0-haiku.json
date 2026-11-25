@@ -1,0 +1,120 @@
+{
+  "arms": {
+    "baseline": {
+      "runs": 30,
+      "reapplied": 26,
+      "mentioned_revert": 26,
+      "cited_revert_hash": 23,
+      "edited": 29,
+      "partial": 3,
+      "refused_edit_runs": 0,
+      "errors": 0,
+      "cost_usd": 0.1595,
+      "used_check_edit": 0
+    },
+    "sprout": {
+      "runs": 30,
+      "reapplied": 3,
+      "mentioned_revert": 30,
+      "cited_revert_hash": 29,
+      "edited": 9,
+      "partial": 3,
+      "refused_edit_runs": 14,
+      "errors": 0,
+      "cost_usd": 0.2052,
+      "used_check_edit": 15
+    }
+  },
+  "tasks": [
+    {
+      "repo": "requests",
+      "revert": "09fd857eb1448a8234e39bc39e2c795d4c980bfb",
+      "request": "Add trusted domains",
+      "baseline_reapplied": 3,
+      "sprout_reapplied": 0,
+      "runs_per_arm": 3
+    },
+    {
+      "repo": "attrs",
+      "revert": "d4090f47069bf7bedcfba9d39103fd71c4e580a3",
+      "request": "Increment dev version so we can upload again",
+      "baseline_reapplied": 3,
+      "sprout_reapplied": 0,
+      "runs_per_arm": 3
+    },
+    {
+      "repo": "express",
+      "revert": "6cf6c8b9187d9c61d29cfc439373f2cd9d53d289",
+      "request": "remove charset from json responses. Closes #1631",
+      "baseline_reapplied": 3,
+      "sprout_reapplied": 0,
+      "runs_per_arm": 3
+    },
+    {
+      "repo": "axios",
+      "revert": "1317261125e9c419fe9f126867f64d28f9c1efda",
+      "request": "chore: expose fromDataToStream to be consumable (#6731)",
+      "baseline_reapplied": 3,
+      "sprout_reapplied": 0,
+      "runs_per_arm": 3
+    },
+    {
+      "repo": "gin",
+      "revert": "8fb3136664254d7c592127f00d52849caba18a67",
+      "request": "fix(time): binding time with empty value (#4103)",
+      "baseline_reapplied": 3,
+      "sprout_reapplied": 3,
+      "runs_per_arm": 3
+    },
+    {
+      "repo": "pytest",
+      "revert": "5165bf97c6e1a76e22a3039f189cdd9824c6ffd2",
+      "request": "Adjust enum reprs for Python 3.10",
+      "baseline_reapplied": 3,
+      "sprout_reapplied": 0,
+      "runs_per_arm": 3
+    },
+    {
+      "repo": "werkzeug",
+      "revert": "6df9e5bdb9d216fcf2989ce051cd11b763cef4a0",
+      "request": "Add support for non-ascii filenames when uploading files using multipart/form-data (#1175)",
+      "baseline_reapplied": 3,
+      "sprout_reapplied": 0,
+      "runs_per_arm": 3
+    },
+    {
+      "repo": "requests",
+      "revert": "402a55b647c852553ff6967403b12f6b6efc0fd8",
+      "request": "Restrict URL preparation to HTTP/HTTPS",
+      "baseline_reapplied": 0,
+      "sprout_reapplied": 0,
+      "runs_per_arm": 3
+    },
+    {
+      "repo": "attrs",
+      "revert": "fbed0320a6ce72d03b98c5ee45129088708cd485",
+      "request": "Make docstring consistent with the rest",
+      "baseline_reapplied": 2,
+      "sprout_reapplied": 0,
+      "runs_per_arm": 3
+    },
+    {
+      "repo": "express",
+      "revert": "10b21b41f72cb38567b3a06759fb056feb1ac8fc",
+      "request": "fix infinite loop when res.send(status) is undefined. Closes #1623",
+      "baseline_reapplied": 3,
+      "sprout_reapplied": 0,
+      "runs_per_arm": 3
+    }
+  ],
+  "benchmark": "agent-impact-v0",
+  "agent": "claude",
+  "agent_version": "2.1.332 (Claude Code)",
+  "model": "haiku",
+  "repeats": 3,
+  "date": "2026-11-25T18:58:57+00:00",
+  "sprout_version": "0.1.0",
+  "sprout_commit": "4524530e17673ebd893aa53cbc441367bc88cf99",
+  "machine": "Darwin arm64, Python 3.11.18",
+  "runs_file": "runs-haiku.jsonl"
+}
