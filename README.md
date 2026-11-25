@@ -89,6 +89,15 @@ Of 60 sampled kept sentences, 0.767 are fully supported by the commit they cite 
 
 ### Use it from an AI agent (MCP)
 
+In Claude Code, install the plugin (MCP server plus a `/sprout:why` skill):
+
+```sh
+claude plugin marketplace add azzs11/sprout
+claude plugin install sprout@sprout
+```
+
+For Cursor, VS Code and other agents, and for a snippet that tells agents when to call Sprout, see [docs/mcp.md](docs/mcp.md).
+
 `sprout mcp serve` runs an MCP server over stdio for the repository it starts in. It offers three read-only tools:
 
 - `why`: the same answer as `sprout why`, for a `path:line` or a question. The output is plain text under about 1,500 tokens, with 12-character hashes, the quoted reason, any reverts, and a `Basis:` line that says when no commit states a reason.
@@ -135,7 +144,7 @@ Everything below is planned and not built yet.
 | 1 | Foundation: Typer + Rich CLI with `--json`, pygit2 git layer, fixture-repo tests, CI on 3 OSes | Done |
 | 2 | History index: commits, hunks, symbols (tree-sitter), hybrid search | Done |
 | 3 | WhyBench and `sprout why` with cited answers | Done (v0) |
-| 4 | MCP server for AI agents, `sprout init`, Claude Code plugin | In progress |
+| 4 | MCP server for AI agents, `sprout init`, Claude Code plugin | Done |
 | 5 | Regression Memory: `sprout risk`, git hooks, GitHub Action | Planned |
 | 7 | "Time Machine" web view | Planned |
 | 6 | Commit messages with rationale | Planned |
