@@ -1,4 +1,4 @@
-"""Bench commands: ``uv run python -m bench <build|lines|candidates|run|speed|answers|faithfulness|risk|hook-speed>``."""
+"""Bench commands: ``uv run python -m bench <build|lines|candidates|run|speed|answers|faithfulness|risk|hook-speed|agent-impact>``."""
 
 from __future__ import annotations
 
@@ -319,6 +319,15 @@ def hook_speed(
 
     stem = run_hook_speed(split, _sprout_commit(), typer.echo)
     typer.echo(f"wrote {stem}.json and .md")
+
+
+def _register_agent_impact() -> None:
+    from bench.agent.cli import agent_app
+
+    app.add_typer(agent_app)
+
+
+_register_agent_impact()
 
 
 def _sprout_commit() -> str:
