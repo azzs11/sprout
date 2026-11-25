@@ -65,10 +65,16 @@ def test_parse_reads_tools_result_and_cost() -> None:
         for m in [
             {"type": "system"},
             {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Read"}]}},
-            {"type": "result", "result": "done", "total_cost_usd": 0.01, "num_turns": 3},
+            {
+                "type": "result",
+                "result": "done",
+                "total_cost_usd": 0.01,
+                "num_turns": 3,
+                "permission_denials": [{"tool_name": "Edit"}],
+            },
         ]
     )
-    assert _parse(stream + "\nnot json") == ("done", ["Read"], 0.01, 3)
+    assert _parse(stream + "\nnot json") == ("done", ["Read"], 0.01, 3, ["Edit"])
 
 
 def test_pruned_clone_cannot_see_the_future(make_repo: MakeRepo, tmp_path: Path) -> None:
@@ -93,7 +99,8 @@ def test_summarise_counts_per_arm() -> None:
     task: dict[str, object] = {"repo": "r", "revert": "abc", "prompt": "Please make this change"}
     rows: list[dict[str, object]] = [
         {"arm": arm, "revert": "abc", "reapplied": arm == "baseline", "mentioned": True,
-         "cited_hash": False, "edited": True, "exit": 0, "cost_usd": 0.5, "tools": []}
+         "cited_hash": False, "edited": True, "exit": 0, "cost_usd": 0.5, "tools": [],
+         "share": 1.0 if arm == "baseline" else 0.3, "denied_tools": ["Edit"] if arm == "sprout" else ["Bash"]}
         for arm in ("baseline", "sprout")
     ]  # fmt: skip
     summary = report.summarise(rows, [task])
@@ -101,3 +108,7 @@ def test_summarise_counts_per_arm() -> None:
     assert isinstance(arms, dict)
     assert arms["baseline"]["reapplied"] == 1
     assert arms["sprout"]["reapplied"] == 0
+    assert arms["sprout"]["partial"] == 1
+    assert arms["sprout"]["refused_edit_runs"] == 1
+    assert arms["baseline"]["refused_edit_runs"] == 0
+    assert arms["baseline"]["partial"] == 0

@@ -95,7 +95,7 @@ def run_once(
     done = subprocess.run(
         command, cwd=run_dir, capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=900
     )
-    result, tools, cost, turns = _parse(done.stdout)
+    result, tools, cost, turns, denied = _parse(done.stdout)
     _sh(["git", "-C", str(run_dir), "add", "-A", "-N"])
     diff = _sh(["git", "-C", str(run_dir), "diff"])
     share = _share(task, diff)
@@ -105,7 +105,7 @@ def run_once(
         "repeat": rep, "model": model, "exit": done.returncode, "seconds": round(time.monotonic() - start, 1),
         "reapplied": share >= REAPPLIED, "share": round(share, 3), "edited": bool(diff.strip()),
         "mentioned": revert[:7] in result or "revert" in result.lower(),
-        "cited_hash": revert[:7] in result, "tools": tools, "cost_usd": cost, "turns": turns,
+        "cited_hash": revert[:7] in result, "denied_tools": denied, "tools": tools, "cost_usd": cost, "turns": turns,
         "result": result[:2000],
     }  # fmt: skip
     shutil.rmtree(run_dir, ignore_errors=True)
@@ -140,8 +140,9 @@ def _write_agent_config(config: Path, hooks: Path) -> None:
     hooks.write_text(json.dumps({"hooks": {"PreToolUse": [entry]}}))
 
 
-def _parse(stream: str) -> tuple[str, list[str], float | None, int | None]:
-    result, tools, cost, turns = "", [], None, None
+def _parse(stream: str) -> tuple[str, list[str], float | None, int | None, list[str]]:
+    """Final answer, tool calls, cost, turns, and tool calls refused (by a hook or permissions)."""
+    result, tools, cost, turns, denied = "", [], None, None, list[str]()
     for line in stream.splitlines():
         try:
             message = json.loads(line)
@@ -154,7 +155,8 @@ def _parse(stream: str) -> tuple[str, list[str], float | None, int | None]:
         elif message.get("type") == "result":
             result = str(message.get("result") or "")
             cost, turns = message.get("total_cost_usd"), message.get("num_turns")
-    return result, tools, cost, turns
+            denied = [str(d.get("tool_name")) for d in message.get("permission_denials") or []]
+    return result, tools, cost, turns, denied
 
 
 def _share(task: dict[str, object], diff: str) -> float:

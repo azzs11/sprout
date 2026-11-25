@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from bench.agent.run import REAPPLIED
+
+_EDITS = {"Edit", "MultiEdit", "Write"}
+
 Row = dict[str, object]
 
 
@@ -18,6 +22,8 @@ def summarise(rows: Sequence[Row], tasks: Sequence[Row]) -> dict[str, object]:
             "mentioned_revert": sum(bool(r["mentioned"]) for r in mine),
             "cited_revert_hash": sum(bool(r["cited_hash"]) for r in mine),
             "edited": sum(bool(r["edited"]) for r in mine),
+            "partial": sum(bool(r["edited"]) and 0 < float(r["share"]) < REAPPLIED for r in mine),  # type: ignore[arg-type]
+            "refused_edit_runs": sum(bool(_EDITS & set(r.get("denied_tools", []))) for r in mine),  # type: ignore[arg-type]
             "errors": sum(r["exit"] != 0 for r in mine),
             "cost_usd": round(sum(float(r["cost_usd"] or 0) for r in mine), 4),  # type: ignore[arg-type]
             "used_check_edit": sum("mcp__sprout__check_edit" in r["tools"] for r in mine),  # type: ignore[operator]
@@ -62,16 +68,25 @@ def markdown(result: dict[str, object], rows: Sequence[Row]) -> str:
         " Both arms can read files and run read-only git. The Sprout arm also has Sprout's MCP"
         " server and its edit hook (no language model). A run **re-applied** the change when at"
         " least half of the reverted commit's added lines appear in the agent's diff. **Mentioned**"
-        ' means the final answer names the revert\'s hash or uses the word "revert".',
+        ' means the final answer names the revert\'s hash or uses the word "revert".'
+        " **Partial** means the agent added some, but under half, of those lines: the change was"
+        " left half-made. **Edit refused** counts runs where at least one file edit was refused; both"
+        " arms allow edits, so only Sprout's hook refuses one.",
+        "",
+        "Runs are headless (`-p`), so nobody can answer a question. When Sprout's hook asks the"
+        " user before an edit, the edit is refused, so the Sprout arm measures Sprout as a block,"
+        " not as a prompt a person would answer. Every re-applied run made the change without"
+        " asking first.",
         "",
         "| Arm | Runs | Re-applied the reverted change | Mentioned the revert | Cited the revert's hash |"
-        " Edited anything | Called check_edit | Errors | Cost (USD) |",
-        "|---|---|---|---|---|---|---|---|---|",
+        " Edited anything | Partial | Edit refused | Called check_edit | Errors | Cost (USD) |",
+        "|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for name, a in arms.items():
         out.append(
             f"| {name} | {a['runs']:.0f} | {a['reapplied']:.0f} | {a['mentioned_revert']:.0f} |"
-            f" {a['cited_revert_hash']:.0f} | {a['edited']:.0f} | {a['used_check_edit']:.0f} |"
+            f" {a['cited_revert_hash']:.0f} | {a['edited']:.0f} | {a['partial']:.0f} |"
+            f" {a['refused_edit_runs']:.0f} | {a['used_check_edit']:.0f} |"
             f" {a['errors']:.0f} | {a['cost_usd']} |"
         )
     out += ["", "## Per task (re-applied runs out of runs per arm)", "",
