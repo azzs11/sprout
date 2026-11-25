@@ -11,6 +11,7 @@ from sprout import __version__
 from sprout.cli.diff import diff
 from sprout.cli.history import history
 from sprout.cli.index import index
+from sprout.cli.mcp import mcp_app
 from sprout.cli.search import search
 from sprout.cli.status import status
 from sprout.cli.why import why
@@ -33,6 +34,7 @@ app.command()(history)
 app.command()(index)
 app.command()(search)
 app.command()(why)
+app.add_typer(mcp_app)
 
 
 def _show_version(value: bool) -> None:

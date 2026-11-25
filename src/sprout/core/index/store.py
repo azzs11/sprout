@@ -21,9 +21,11 @@ INDEX_FILE = "index.db"
 class Store:
     """Read and write one repository's index. Every write method is one transaction."""
 
-    def __init__(self, path: Path) -> None:
+    def __init__(self, path: Path, *, any_thread: bool = False) -> None:
         self.path = path
-        self._db = sqlite3.connect(path, isolation_level=None)
+        # ``any_thread`` lets a long-lived server reuse one connection (and its vector cache)
+        # from worker threads; the caller must still run one call at a time.
+        self._db = sqlite3.connect(path, isolation_level=None, check_same_thread=not any_thread)
         self._db.execute("PRAGMA journal_mode = WAL")
         self._db.execute("PRAGMA synchronous = NORMAL")
         self._db.execute("PRAGMA foreign_keys = ON")
@@ -41,7 +43,7 @@ class Store:
             )
 
     @classmethod
-    def open(cls, base: Path, *, create: bool) -> Store:
+    def open(cls, base: Path, *, create: bool, any_thread: bool = False) -> Store:
         """Open ``base/.sprout/index.db``. With ``create``, make the folder if needed."""
         folder = base / INDEX_DIR
         db = folder / INDEX_FILE
@@ -51,7 +53,7 @@ class Store:
             folder.mkdir(parents=True, exist_ok=True)
             # Keeps the index out of `git status` without touching the user's .gitignore.
             (folder / ".gitignore").write_text("*\n", encoding="utf-8")
-        return cls(db)
+        return cls(db, any_thread=any_thread)
 
     def close(self) -> None:
         """Close the connection."""
