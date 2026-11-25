@@ -1,4 +1,4 @@
-"""Bench commands: ``uv run python -m bench <build|lines|candidates|run|speed|answers|faithfulness|risk>``."""
+"""Bench commands: ``uv run python -m bench <build|lines|candidates|run|speed|answers|faithfulness|risk|hook-speed>``."""
 
 from __future__ import annotations
 
@@ -307,6 +307,17 @@ def risk(split: Annotated[str, typer.Option(help="test, tune, holdout or all")] 
     from bench.risk.run import run_split
 
     stem = run_split(split, _sprout_commit(), typer.echo)
+    typer.echo(f"wrote {stem}.json and .md")
+
+
+@app.command("hook-speed")
+def hook_speed(
+    split: Annotated[str, typer.Option(help="test, tune, holdout or all")] = "tune",
+) -> None:
+    """Time sprout-hook agent per edit (fresh process each) on every repository in a split."""
+    from bench.risk.run import run_hook_speed
+
+    stem = run_hook_speed(split, _sprout_commit(), typer.echo)
     typer.echo(f"wrote {stem}.json and .md")
 
 

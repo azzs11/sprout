@@ -81,6 +81,8 @@ def _label_block(cases: Sequence[Case], truth: m.Truth) -> dict[str, object]:
     return {
         "sprout": m.with_intervals(cases, m.sprout_flag, truth)
         | {"lead_days": m.lead_days(cases, m.sprout_flag)},
+        "sprout_high": m.with_intervals(cases, m.sprout_high_flag, truth)
+        | {"lead_days": m.lead_days(cases, m.sprout_high_flag)},
         "baseline": m.with_intervals(cases, m.baseline_flag, truth)
         | {"lead_days": m.lead_days(cases, m.baseline_flag)},
         "random": {
@@ -137,6 +139,7 @@ def report(result: dict[str, object], cases: Sequence[Case]) -> str:
 
 def _label_section(name: str, block: dict[str, object]) -> list[str]:
     s: dict[str, object] = block["sprout"]  # type: ignore[assignment]
+    hi: dict[str, object] = block["sprout_high"]  # type: ignore[assignment]
     b: dict[str, object] = block["baseline"]  # type: ignore[assignment]
     r: dict[str, float] = block["random"]  # type: ignore[assignment]
     budgets: dict[str, list[dict[str, float]]] = block["budgets"]  # type: ignore[assignment]
@@ -149,6 +152,7 @@ def _label_section(name: str, block: dict[str, object]) -> list[str]:
         "| Flags | Alerts | Alert rate | Precision | Recall | Median lead (days) |",
         "|---|---|---|---|---|---|",
         _row("Sprout (default)", s),
+        _row("Sprout, high only (agent hook asks)", hi),
         _row("Recent-fix file baseline", b),
         f"| Random, same alert rate | n/a | {r['alert_rate']:.3f} | {r['precision']:.3f} |"
         f" {r['recall']:.3f} | n/a |",
@@ -198,3 +202,56 @@ def _case(c: Case) -> str:
     cited = ", ".join(f"`{h[:9]}`" for h in c.cited[:3]) or "nothing"
     kinds = ", ".join(c.kinds) or "no finding"
     return f"- {c.repo} `{c.hash[:9]}`{revert}: {c.level} ({kinds}); cites {cited}"
+
+
+def run_hook_speed(split: str, sprout_commit: str, echo: Callable[[str], None]) -> Path:
+    """Time ``sprout-hook agent`` on every repository in ``split``."""
+    from bench.risk.hook_speed import summarise, time_repo
+
+    specs = [s for s in load_specs() if split == "all" or s.split == split]
+    per_repo: dict[str, dict[str, object]] = {}
+    pooled: list[float] = []
+    for spec in specs:
+        per_repo[spec.name] = time_repo(repo_path(spec.name))
+        echo(f"timed {spec.name}")
+    for row in per_repo.values():
+        pooled.append(float(row["edit"]["p95"]))  # type: ignore[index]
+    result = {
+        "benchmark": "risk-hook-speed-v0",
+        "split": split,
+        "method": METHOD,
+        "date": datetime.now(UTC).isoformat(timespec="seconds"),
+        "sprout_version": __version__,
+        "sprout_commit": sprout_commit,
+        "machine": f"{platform.system()} {platform.machine()}, Python {platform.python_version()}",
+        "repos": per_repo,
+        "worst_repo_edit_p95": max(pooled) if pooled else 0.0,
+        "median_repo_edit_p95": summarise(pooled)["p50"],
+    }
+    stem = RESULTS_DIR / f"risk-hook-speed-v0-{split}"
+    stem.with_suffix(".json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    stem.with_suffix(".md").write_text(_speed_report(result), encoding="utf-8")
+    return stem
+
+
+def _speed_report(result: dict[str, object]) -> str:
+    repos: dict[str, dict[str, dict[str, float]]] = result["repos"]  # type: ignore[assignment]
+    out = [
+        f"# Hook latency v0: {result['split']} split",
+        "",
+        f"`sprout-hook agent`, a fresh process per event, Sprout {result['sprout_version']} at"
+        f" `{result['sprout_commit']}`, {result['date']}, {result['machine']}. Each repository: up"
+        " to 30 recently modified files rewritten to their version 40 commits earlier (Write"
+        " events), and 10 non-edit events. Milliseconds.",
+        "",
+        "| Repo | Edits | Edit p50 | Edit p95 | Edit max | No-op p50 | Asked | Noted | Silent |",
+        "|---|---|---|---|---|---|---|---|---|",
+    ]
+    for name, r in repos.items():
+        e, n, d = r["edit"], r["noop"], r["decisions"]
+        out.append(
+            f"| {name} | {r['edits']} | {e['p50']} | {e['p95']} | {e['max']} | {n['p50']} |"
+            f" {d['ask']} | {d['allow']} | {d['none']} |"
+        )
+    out += ["", f"Worst per-repository edit p95: {result['worst_repo_edit_p95']} ms."]
+    return "\n".join(out) + "\n"

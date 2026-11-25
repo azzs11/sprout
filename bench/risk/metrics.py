@@ -31,6 +31,11 @@ def sprout_flag(case: Case) -> bool:
     return case.level != "low"
 
 
+def sprout_high_flag(case: Case) -> bool:
+    """What the agent hook interrupts for: a high finding."""
+    return case.level == "high"
+
+
 def baseline_flag(case: Case) -> bool:
     """A recent fix, security or revert commit touched one of the same files."""
     return case.baseline > 0
