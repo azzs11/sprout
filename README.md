@@ -67,6 +67,27 @@ For a line, it ranks them by how clearly each message states a reason. For a fre
 
 **Before indexing:** line questions work without an index, using git history only. `sprout index` adds function history, reverts and related commits.
 
+### Check a change against history
+
+```sh
+sprout risk              # uncommitted changes (staged and unstaged) against HEAD
+sprout risk --staged     # only what git commit would take
+sprout risk --diff x.patch   # any unified diff ('-' reads stdin)
+```
+
+`sprout index` keeps the changed lines of every fix, security and revert commit, as whitespace-normalised hashes. The lines such a commit removed count as "bad" (the bug, or the change that was reverted). The lines it added count as "guards" (the fix, or the code the revert restored). `sprout risk` warns when your change re-adds a bad line or removes a guard. It cites the commit, shows the matching lines with `+`/`-` and quotes the commit's stated reason.
+
+Some rules keep it quiet:
+
+- When several commits touched a line, the newest one decides, so a change that was reverted and later re-landed stops warning.
+- Lines that are too short, or that appear in many fix commits, are ignored.
+- Code you only move or re-indent does not count.
+- Matches must be in the same file, unless the line is long enough to follow a rename.
+
+The level is a word (`low`, `review`, `high`), not a colour. `high` means undoing a security fix or re-applying most of a reverted change. With nothing to cite it stays silent.
+
+`sprout risk` is advisory: it exits 0 unless a finding involves a past security fix (exit 2), or you pass `--strict` (exit 2 on any finding). `SPROUT_SKIP=1` skips the check. No model is called. How often it is right is not measured yet; the revert-replay benchmark comes next.
+
 ### Measured: WhyBench v0
 
 [WhyBench](bench/README.md) asks which commit explains a line or answers a "why" question. The correct answer for each is a commit whose message states a reason. The headline numbers below come from the **holdout** split: 139 line questions and 44 natural-language questions from 4 repositories (werkzeug, koa, chi, regex) that were added after the method was frozen and run once. From [`bench/results/whybench-v0-holdout.md`](bench/results/whybench-v0-holdout.md):
@@ -145,7 +166,7 @@ Everything below is planned and not built yet.
 | 2 | History index: commits, hunks, symbols (tree-sitter), hybrid search | Done |
 | 3 | WhyBench and `sprout why` with cited answers | Done (v0) |
 | 4 | MCP server for AI agents, `sprout init`, Claude Code plugin | Done |
-| 5 | Regression Memory: `sprout risk`, git hooks, GitHub Action | Planned |
+| 5 | Regression Memory: `sprout risk`, git hooks, GitHub Action | In progress |
 | 7 | "Time Machine" web view | Planned |
 | 6 | Commit messages with rationale | Planned |
 | 8 | PyPI release, docs site, report | Planned |
