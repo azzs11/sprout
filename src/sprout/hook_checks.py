@@ -13,7 +13,7 @@ from sprout.core.git.pygit2_repo import Pygit2Repo
 from sprout.core.index.store import Store
 from sprout.core.risk import acks
 from sprout.core.risk.check import check_changes
-from sprout.core.risk.edits import edit_lines, line_of
+from sprout.core.risk.edits import file_edit_lines
 from sprout.errors import IndexNotFoundError
 from sprout.models import ChangedLine, Label, RiskCard, RiskFinding, RiskKind, RiskLevel
 
@@ -87,18 +87,16 @@ def _event_lines(event: Event) -> tuple[Pygit2Repo, list[ChangedLine]] | None:
     raw = tool_input.get("file_path")
     if tool not in ("Edit", "MultiEdit", "Write") or not isinstance(raw, str):
         return None
-    file = Path(raw)
     cwd = event.get("cwd")
-    repo = open_repo(file.parent if file.parent.is_dir() else str(cwd or "."))
-    path = repo.relative_path(file)
-    current = file.read_text(encoding="utf-8", errors="replace") if file.is_file() else ""
+    parent = Path(raw).parent
+    repo = open_repo(parent if parent.is_dir() else str(cwd or "."))
     if tool == "Write":
-        return repo, edit_lines(path, current, str(tool_input.get("content", "")))
+        return repo, file_edit_lines(repo, raw, None, str(tool_input.get("content", "")))
     edits = tool_input.get("edits") if tool == "MultiEdit" else [tool_input]
     changed: list[ChangedLine] = []
     for item in cast("list[Event]", edits if isinstance(edits, list) else []):
         old, new = str(item.get("old_string", "")), str(item.get("new_string", ""))
-        changed += edit_lines(path, old, new, start=line_of(current, old))
+        changed += file_edit_lines(repo, raw, old, new)
     return repo, changed
 
 
