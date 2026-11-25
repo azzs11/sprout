@@ -44,7 +44,7 @@ def disable_retries(repo: RepoBuilder) -> None:
 def test_reapplying_a_revert_warns_but_does_not_block(shop: RepoBuilder) -> None:
     disable_retries(shop)
     got = card("-C", str(shop.root))
-    assert (got["level"], got["verdict"], got["method"]) == ("high", "stop", "risk@1")
+    assert (got["level"], got["verdict"], got["method"]) == ("high", "stop", "risk@2")
     assert got["findings"][0]["kind"] == "reapplies_reverted"
 
 

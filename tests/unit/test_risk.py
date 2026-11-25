@@ -1,4 +1,4 @@
-"""Regression Memory: line fingerprints, diff parsing and the risk@1 matching rules."""
+"""Regression Memory: line fingerprints, diff parsing and the risk@2 matching rules."""
 
 from __future__ import annotations
 
@@ -280,3 +280,36 @@ def test_before_ignores_history_that_had_not_happened_yet(payments: RepoBuilder)
     with index(payments) as store:
         assert check_changes(store, changed, before=revert_at).findings == []
         assert check_changes(store, changed, before=revert_at + 1).level is RiskLevel.HIGH
+
+
+def test_removing_a_fix_counts_only_when_it_undoes_the_fix(make_repo: MakeRepo) -> None:
+    repo = make_repo("empty")
+    repo.write("io.py", "def read(path):\n    return open(path).read()\n").commit("feat: read")
+    guarded = (
+        "def read(path):\n"
+        "    if path is None:\n"
+        "        raise ValueError('path is required')\n"
+        "    with open(path, encoding='utf-8') as handle:\n"
+        "        return handle.read()\n"
+    )
+    repo.write("io.py", guarded).commit("fix: reject a missing path and close the file")
+    file = repo.root / "io.py"
+    file.write_text(guarded.replace("'path is required'", "'give a path'"))
+    assert check_worktree(repo).findings == []  # edits one of four fix lines: churn, not undo
+    file.write_text(
+        "def read(path):\n    with open(path, encoding='utf-8') as handle:\n        return handle.read()\n"
+    )
+    [finding] = check_worktree(repo).findings  # removes the check: two of four lines
+    assert finding.kind is RiskKind.REMOVES_FIX
+
+
+def test_removing_a_one_line_guard_warns(make_repo: MakeRepo) -> None:
+    repo = make_repo("empty")
+    repo.write("api.py", "def get(user):\n    return user.name\n").commit("feat: get")
+    repo.write(
+        "api.py", "def get(user):\n    assert user is not None, 'no user'\n    return user.name\n"
+    )
+    repo.commit("fix: fail clearly without a user")
+    (repo.root / "api.py").write_text("def get(user):\n    return user.name\n")
+    [finding] = check_worktree(repo).findings
+    assert (finding.kind, finding.matched, finding.total) == (RiskKind.REMOVES_FIX, 1, 1)

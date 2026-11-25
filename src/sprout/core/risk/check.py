@@ -4,7 +4,9 @@ Every fix, security or revert commit marks the lines it removed as *bad* (the bu
 being reverted) and the lines it added as *guards* (the fix, or the restored code). A change
 that re-adds a bad line or removes a guard runs into that commit. When several commits touched
 the same line, the newest decides, so a change that was reverted and later re-landed stops
-warning. Deterministic and model-free: this is the path git and agent hooks call.
+warning. Removing a fix's lines counts only when the change undoes most of that fix (risk@2,
+chosen on the tune split of the revert replay: editing near a fix is ordinary code churn).
+Deterministic and model-free: this is the path git and agent hooks call.
 """
 
 from __future__ import annotations
@@ -28,7 +30,7 @@ from sprout.models import (
     Verdict,
 )
 
-METHOD = "risk@1"  # bump when the rules below change; recorded in every card and eval result
+METHOD = "risk@2"  # bump when the rules below change; recorded in every card and eval result
 DF_MAX = 8  # a line found in more signal commits than this is too common to mean anything
 DISTINCTIVE = 24  # normalised length from which a line may match in another file (renames)
 MIN_SHARE = 0.5  # or match at least this share of the commit's lines on that side
@@ -181,6 +183,8 @@ def _finding(store: Store, commit_id: int, guard: bool, hit: _Hit) -> RiskFindin
         kind = RiskKind.REMOVES_RESTORED if revert else RiskKind.REMOVES_FIX
     else:
         kind = RiskKind.REAPPLIES_REVERTED if revert else RiskKind.REINTRODUCES_FIXED
+    if kind is RiskKind.REMOVES_FIX and not _undoes(matched, total):
+        return None  # an edit near a fix, not an undo of it (risk@2)
     high = Label.SECURITY in labels or (
         kind is RiskKind.REAPPLIES_REVERTED and matched >= MIN_SHARE * max(total, 1)
     )
@@ -197,6 +201,11 @@ def _finding(store: Store, commit_id: int, guard: bool, hit: _Hit) -> RiskFindin
         reverts=[str(t[0]) for t in targets] if revert else [],
         reason=vet_reason(None, commit.message).quote,
     )
+
+
+def _undoes(matched: int, total: int) -> bool:
+    """Most of a fix's added lines are removed: half or more, and 2+ unless it added just one."""
+    return matched >= MIN_SHARE * max(total, 1) and (matched >= 2 or total == 1)
 
 
 def _json_list(raw: str) -> list[str]:

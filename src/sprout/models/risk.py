@@ -69,5 +69,5 @@ class RiskCard(Model):
     verdict: Verdict
     findings: list[RiskFinding]
     checked_lines: int = Field(description="Changed lines compared with history.")
-    method: str = Field(description="Matching rules version, e.g. risk@1.")
+    method: str = Field(description="Matching rules version, e.g. risk@2.")
     notes: list[str] = Field(default_factory=list)
