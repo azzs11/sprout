@@ -54,6 +54,7 @@ Issues = "https://github.com/azzs11/sprout/issues"
 
 [project.scripts]
 sprout = "sprout.cli.app:main"
+sprout-hook = "sprout.hook:main"
 
 [project.optional-dependencies]
 anthropic = [
