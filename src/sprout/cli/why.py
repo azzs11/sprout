@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from typing import Annotated
 
@@ -15,14 +14,14 @@ from rich.text import Text
 from sprout import services
 from sprout.cli.output import JsonOption, RepoOption, emit, handle_errors
 from sprout.config import load_settings
-from sprout.core.answer.why import Models, WhyOptions, why_line, why_question
+from sprout.core.answer.target import why_target
+from sprout.core.answer.why import Models, WhyOptions
 from sprout.core.git import open_repo
 from sprout.core.git.pygit2_repo import Pygit2Repo
 from sprout.core.index.store import Store
-from sprout.errors import IndexNotFoundError, SproutError
+from sprout.errors import IndexNotFoundError
 from sprout.models import AnswerMode, EvidenceRole, WhyAnswer
 
-_LINE_TARGET = re.compile(r"^(?P<path>[^\s]+):(?P<line>\d+)$")
 _ROLE_NAMES = {
     EvidenceRole.LINE_ORIGIN: "this line",
     EvidenceRole.LINE_HISTORY: "earlier line",
@@ -52,22 +51,14 @@ def why(
         settings = load_settings(git.root)
         store = _open_store(git)
         answerer, note = (None, None) if no_llm else services.build_answerer(settings)
-        options = WhyOptions(limit=limit)
-        line_target = _line_target(git, repo, target)
-        if line_target is not None:
-            path, line = line_target
-            answer = why_line(
-                git, store, path, line, rev=at, models=Models(answerer=answerer), options=options
-            )
-        else:
-            if store is None:
-                raise IndexNotFoundError(str(git.root))
-            models = Models(
-                answerer=answerer,
-                embedder=services.build_embedder(settings),
-                reranker=services.build_reranker(settings),
-            )
-            answer = why_question(git, store, target, rev=at, models=models, options=options)
+        models = Models(
+            answerer=answerer,
+            embedder=services.build_embedder(settings),
+            reranker=services.build_reranker(settings),
+        )
+        answer = why_target(
+            git, store, target, cwd=repo, rev=at, models=models, options=WhyOptions(limit=limit)
+        )
         if store is not None:
             store.close()
         if note:
@@ -127,18 +118,3 @@ def _open_store(git: Pygit2Repo) -> Store | None:
         return Store.open(git.root, create=False)
     except IndexNotFoundError:
         return None
-
-
-def _line_target(git: Pygit2Repo, cwd: Path, target: str) -> tuple[str, int] | None:
-    """``path:line`` relative to the repository root, or None if ``target`` is a question."""
-    match = _LINE_TARGET.match(target)
-    if match is None:
-        return None
-    raw, line = match["path"], int(match["line"])
-    for candidate in (cwd / raw, git.root / raw):
-        if candidate.is_file():
-            return git.relative_path(candidate), line
-    raise SproutError(
-        f"No file named {raw} in this repository.",
-        hint="Use a path relative to this folder or the repository root, e.g. src/app.py:42",
-    )
