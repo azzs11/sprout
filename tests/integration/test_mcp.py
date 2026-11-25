@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import os
+import socket
+import subprocess
 import sys
+import time
 from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
@@ -15,6 +18,7 @@ from typer.testing import CliRunner
 
 from sprout import services
 from sprout.cli.app import app
+from sprout.cli.mcp import _is_loopback  # pyright: ignore[reportPrivateUsage]
 from sprout.config import Settings
 from sprout.mcp.format import MAX_CHARS, fit
 from sprout.mcp.server import build_server
@@ -192,3 +196,65 @@ def test_explain_unknown_commit(session: Session) -> None:
     error, text = call(session, "explain_commit", {"commit": "deadbeef"})
     assert error
     assert "Revision 'deadbeef' was not found. Fix: " in text
+
+
+@pytest.mark.parametrize(
+    ("host", "loopback"),
+    [
+        ("127.0.0.1", True),
+        ("::1", True),
+        ("localhost", True),
+        ("0.0.0.0", False),  # noqa: S104 - a test value, not a bind
+        ("example.com", False),
+    ],
+)
+def test_loopback_hosts(host: str, loopback: bool) -> None:
+    assert _is_loopback(host) is loopback
+
+
+def _free_port() -> int:
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        return int(sock.getsockname()[1])
+
+
+def test_http_server(make_repo: MakeRepo) -> None:
+    repo = make_repo("lineage")
+    port = _free_port()
+    proc = subprocess.Popen(
+        [
+            sys.executable,
+            "-m",
+            "sprout",
+            "mcp",
+            "serve",
+            "--http",
+            "--port",
+            str(port),
+            "-C",
+            str(repo.root),
+        ],
+        env={**os.environ, "SPROUT_LLM_PROVIDER": "none"},
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    try:
+        deadline = time.monotonic() + 30
+        while True:
+            try:
+                socket.create_connection(("127.0.0.1", port), timeout=0.2).close()
+                break
+            except OSError:
+                assert proc.poll() is None, proc.stderr.read() if proc.stderr else ""
+                assert time.monotonic() < deadline, "server did not start"
+                time.sleep(0.1)
+
+        async def run() -> str:
+            async with Client(f"http://127.0.0.1:{port}/mcp") as client:
+                result = await client.call_tool("why", {"target": "src/payments/core.py:2"})
+                return result.content[0].text  # type: ignore[union-attr]
+
+        assert "Basis: the top commit's message states the reason" in asyncio.run(run())
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)

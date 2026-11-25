@@ -70,11 +70,19 @@ def build_server(session: Session) -> MCPServer:
     return server
 
 
-def serve(path: Path) -> None:
-    """Run the server over stdio for the repository containing ``path``."""
+def serve(path: Path, *, http: tuple[str, int] | None = None) -> None:
+    """Run the server for the repository containing ``path``, over stdio or local HTTP.
+
+    With ``http=(host, port)`` it serves streamable HTTP at ``/mcp``. On a loopback host the
+    SDK also rejects requests whose Host or Origin is not local (DNS rebinding).
+    """
     session = Session(path)
+    server = build_server(session)
     try:
-        build_server(session).run("stdio")
+        if http is None:
+            server.run("stdio")
+        else:
+            server.run("streamable-http", host=http[0], port=http[1])
     finally:
         session.close()
 
