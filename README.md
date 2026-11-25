@@ -99,7 +99,20 @@ A reason is quoted only if it passes the same check as `sprout why` answers: cop
 
 `sprout mcp serve --http` serves streamable HTTP at `http://127.0.0.1:8765/mcp` instead. On a local address, requests whose Host or Origin header is not local are rejected. There is no authentication, so Sprout warns if you bind to another address.
 
-The server keeps the embedding model, the reranker and the vector index loaded between calls. To add it to Claude Code from a source checkout:
+The server keeps the embedding model, the reranker and the vector index loaded between calls.
+
+**Set it up in one step** with `sprout init` in your repository:
+
+- It indexes commits, files, functions and reverts in the foreground, then adds semantic vectors in the background. Use `--wait` to add them now, or `--no-embed` to skip them. The background job logs to `.sprout/embed.log`.
+- It adds Sprout to `.mcp.json` (Claude Code). Use `-a cursor` for `.cursor/mcp.json` and `-a vscode` for `.vscode/mcp.json`. Other servers in those files are kept. A file with comments is never rewritten; you get the entry to paste instead.
+- It says where written answers will come from: a local Ollama model, if it is running and pulled, otherwise facts only.
+- It lists the three most recent reverts it found.
+
+The config uses a global `sprout` if one is on your PATH (for example after `uv tool install`). Otherwise it uses this machine's Python path and warns you not to commit it that way.
+
+`sprout uninstall` removes Sprout from all three config files (deleting any file or folder that held only Sprout) and deletes `.sprout/`. Use `--keep-index` to keep the index. Your `.sprout.toml` is kept.
+
+To add the server by hand instead, from a source checkout:
 
 ```sh
 claude mcp add sprout -- uvx --from /path/to/sprout sprout mcp serve
