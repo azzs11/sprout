@@ -1,4 +1,4 @@
-"""WhyBench commands: ``uv run python -m bench <build|lines|candidates|run|speed|answers|faithfulness>``."""
+"""Bench commands: ``uv run python -m bench <build|lines|candidates|run|speed|answers|faithfulness|risk>``."""
 
 from __future__ import annotations
 
@@ -299,6 +299,15 @@ def _answers_detail(split: str, model: str) -> Path:
     """Per-task answer records for one split and model (kept in the cache, not committed)."""
     safe = model.replace(":", "_").replace("/", "_")
     return cache_dir() / f"whybench-v0-answers-{split}-{safe}.jsonl"
+
+
+@app.command()
+def risk(split: Annotated[str, typer.Option(help="test, tune, holdout or all")] = "tune") -> None:
+    """Revert replay: would sprout risk have warned before each revert? (bench/risk/)."""
+    from bench.risk.run import run_split
+
+    stem = run_split(split, _sprout_commit(), typer.echo)
+    typer.echo(f"wrote {stem}.json and .md")
 
 
 def _sprout_commit() -> str:
