@@ -20,8 +20,9 @@ INSTRUCTIONS = """\
 Sprout answers "why is this code like this?" from this repository's git history.
 Call `why` with path:line before changing code you did not write, especially before removing
 a check, retry, timeout or workaround: it shows the commits behind the line, quotes the
-stated reason, and flags reverts. Cite the commit hashes it returns. If it says no commit
-states a reason, say that instead of guessing.
+stated reason, and flags reverts. Use `explain_commit` to read one of those commits and
+`search_history` to find commits by topic. Cite the commit hashes these tools return. If
+they say no commit states a reason, say that instead of guessing.
 """
 _READ_ONLY = ToolAnnotations(read_only_hint=True, idempotent_hint=True, open_world_hint=False)
 
@@ -58,6 +59,13 @@ def build_server(session: Session) -> MCPServer:
     ) -> str:
         """Search this repository's commit history (messages, files, functions, reverts)."""
         return _run(lambda: fmt.search_text(session.search(query, limit=limit)))
+
+    @server.tool(annotations=_READ_ONLY)
+    def explain_commit(
+        commit: Annotated[str, Field(description="A commit hash (short is fine), branch or tag.")],
+    ) -> str:
+        """Show one commit: its stated reason, files and functions changed, reverts, and diff."""
+        return _run(lambda: fmt.commit_text(session.explain(commit)))
 
     return server
 

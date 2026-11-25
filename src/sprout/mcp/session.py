@@ -12,13 +12,14 @@ from pathlib import Path
 
 from sprout import services
 from sprout.config import Settings, load_settings
+from sprout.core.answer.commit import explain_commit
 from sprout.core.answer.target import why_target
 from sprout.core.answer.why import Models, WhyOptions
 from sprout.core.git import open_repo
 from sprout.core.index.store import Store
 from sprout.core.retrieve.hybrid import search
 from sprout.errors import IndexNotFoundError
-from sprout.models import SearchResults, WhyAnswer
+from sprout.models import CommitExplanation, SearchResults, WhyAnswer
 
 
 class Session:
@@ -65,6 +66,11 @@ class Session:
             return search(
                 store, query, limit=limit, embedder=self._embedder, reranker=self._reranker
             )
+
+    def explain(self, rev: str) -> CommitExplanation:
+        """Explain one commit; revert links need the index."""
+        with self.lock:
+            return explain_commit(self.repo, self._open_store(), rev)
 
     def close(self) -> None:
         """Close the index."""

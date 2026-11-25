@@ -63,7 +63,7 @@ def test_lists_read_only_tools(session: Session) -> None:
             return (await client.list_tools()).tools
 
     tools = {t.name: t for t in asyncio.run(run())}
-    assert set(tools) == {"why", "search_history"}
+    assert set(tools) == {"why", "search_history", "explain_commit"}
     assert all(t.annotations and t.annotations.read_only_hint for t in tools.values())
     assert tools["why"].input_schema["required"] == ["target"]
 
@@ -160,5 +160,35 @@ def test_stdio_server_starts(make_repo: MakeRepo) -> None:
             return names, result.content[0].text  # type: ignore[union-attr]
 
     names, text = asyncio.run(run())
-    assert names == {"why", "search_history"}
+    assert names == {"why", "search_history", "explain_commit"}
     assert "Basis: the top commit's message states the reason" in text
+
+
+def test_explain_commit_shows_reason_reverts_and_files(make_repo: MakeRepo) -> None:
+    repo = make_repo("revert")
+    index(repo.root)
+    s = Session(repo.root, OFFLINE)
+    bad = repo.git("rev-parse", "HEAD~1").strip()
+    error, bad_text = call(s, "explain_commit", {"commit": bad[:7]})
+    _, revert_text = call(s, "explain_commit", {"commit": "HEAD"})
+    s.close()
+    assert not error, bad_text
+    assert bad_text.startswith(f"commit {bad[:12]} ")
+    assert f"REVERTED by {repo.head()[:12]}" in bad_text
+    assert "Reason: the message does not state one; don't guess." in bad_text
+    assert "  modified retry.py +1 -1" in bad_text
+    assert "-RETRIES = 3" in bad_text
+    assert f"This commit REVERTS {bad[:12]}." in revert_text
+
+
+def test_explain_commit_reason_and_symbols(session: Session) -> None:
+    error, text = call(session, "explain_commit", {"commit": "HEAD"})
+    assert not error, text
+    assert 'Reason, quoted from the message: "' in text
+    assert "in verify_token" in text
+
+
+def test_explain_unknown_commit(session: Session) -> None:
+    error, text = call(session, "explain_commit", {"commit": "deadbeef"})
+    assert error
+    assert "Revision 'deadbeef' was not found. Fix: " in text

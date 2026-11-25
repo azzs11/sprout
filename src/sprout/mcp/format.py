@@ -7,7 +7,17 @@ into ``git show``.
 from __future__ import annotations
 
 from sprout.core.answer.reasons import vet_reason
-from sprout.models import AnswerMode, Evidence, IssueRef, Label, SearchHit, SearchResults, WhyAnswer
+from sprout.models import (
+    AnswerMode,
+    ChangedFile,
+    CommitExplanation,
+    Evidence,
+    IssueRef,
+    Label,
+    SearchHit,
+    SearchResults,
+    WhyAnswer,
+)
 
 HASH = 12
 MAX_CHARS = 6_000  # about 1,500 tokens
@@ -59,6 +69,42 @@ def search_text(results: SearchResults) -> str:
     if not results.hits:
         lines.append("No commits match. Try other words, or check the index with sprout doctor.")
     return fit(lines)
+
+
+def commit_text(ex: CommitExplanation) -> str:
+    """Render a ``CommitExplanation`` for an agent."""
+    c = ex.commit
+    flags = _flags(ex.labels, ex.refs, ex.reverted_by).lstrip("; ")
+    lines = [
+        f"commit {c.hash[:HASH]} {c.authored_at:%Y-%m-%d} {c.author.name}",
+        c.summary + (f" ({flags})" if flags else ""),
+    ]
+    if ex.reverts:
+        lines.append("This commit REVERTS " + ", ".join(h[:HASH] for h in ex.reverts) + ".")
+    if not ex.indexed:
+        lines.append("Note: no index, so commits that revert this one are unknown (sprout index).")
+    lines.append(
+        f'Reason, quoted from the message: "{_clip(ex.reason, _QUOTE)}"'
+        if ex.reason
+        else "Reason: the message does not state one; don't guess."
+    )
+    body = c.message.strip().partition("\n")[2].strip()
+    if body:
+        lines += ["", "Message:", *(f"  {ln}" for ln in body.splitlines()[:15])]
+    more = " (more not listed)" if ex.files_truncated else ""
+    lines += ["", f"Files ({len(ex.files)}{more}):", *(_file_line(f) for f in ex.files[:15])]
+    if ex.patch:
+        note = ", cut short" if ex.patch_truncated else ""
+        note += f", {ex.redacted} secret(s) redacted" if ex.redacted else ""
+        lines += ["", f"Diff (first parent{note}):", *ex.patch.splitlines()]
+    return fit(lines)
+
+
+def _file_line(f: ChangedFile) -> str:
+    name = f"{f.old_path} -> {f.path}" if f.old_path and f.old_path != f.path else f.path
+    where = f" in {', '.join(f.symbols[:4])}" if f.symbols else ""
+    size = "binary" if f.binary else f"+{f.additions} -{f.deletions}"
+    return f"  {f.kind.value} {name} {size}{where}"
 
 
 def fit(lines: list[str], limit: int = MAX_CHARS) -> str:
