@@ -1,12 +1,13 @@
 # Using Sprout from AI agents (MCP)
 
-Sprout's MCP server gives an agent three read-only tools for the repository it runs in:
+Sprout's MCP server gives an agent four read-only tools for the repository it runs in:
 
 | Tool | Use it to |
 |---|---|
 | `why` | Explain a line (`src/auth.py:42`) or answer a "why" question, citing commits |
 | `search_history` | Find commits by topic |
 | `explain_commit` | Read one commit: stated reason, files and functions changed, reverts, redacted diff |
+| `check_edit` | Before an edit: proceed, review or stop, citing the past fixes and reverts it would undo (no model) |
 
 The output is plain text under about 1,500 tokens. Every claim carries a 12-character commit hash. A `Basis:` line says whether a commit message states the reason or not. When none does, the message text is shown as written and labelled as not checked.
 
