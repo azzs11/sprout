@@ -68,6 +68,21 @@ CREATE TABLE IF NOT EXISTS reverts (
 );
 CREATE INDEX IF NOT EXISTS reverts_target ON reverts (target);
 
+-- Regression Memory: normalised line hashes of fix, security and revert commits.
+CREATE TABLE IF NOT EXISTS lines (
+    commit_id INTEGER NOT NULL REFERENCES commits (id) ON DELETE CASCADE,
+    added     INTEGER NOT NULL,
+    hash      INTEGER NOT NULL,
+    path      TEXT NOT NULL,
+    line      INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS lines_hash ON lines (hash);
+CREATE INDEX IF NOT EXISTS lines_commit ON lines (commit_id);
+CREATE TABLE IF NOT EXISTS line_commits (
+    commit_id INTEGER PRIMARY KEY REFERENCES commits (id) ON DELETE CASCADE,
+    kept      INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS vectors (
     commit_id INTEGER PRIMARY KEY REFERENCES commits (id) ON DELETE CASCADE,
     embedding BLOB NOT NULL

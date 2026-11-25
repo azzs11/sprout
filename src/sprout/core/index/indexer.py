@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Protocol
 
 from sprout.core.git.pygit2_repo import Pygit2Repo
-from sprout.core.index import summarise, vectors
+from sprout.core.index import lines, summarise, vectors
 from sprout.core.index.embedder import Embedder
 from sprout.core.index.store import Store
 from sprout.core.index.summarise import Summariser
@@ -75,6 +75,7 @@ def build_index(
         raise NoCommitsError
     _prune(repo, store, progress)
     _index_commits(repo, store, progress, options)
+    _fingerprint(repo, store, progress, options)
     if summariser is not None:
         _summarise(repo, store, summariser, progress, options)
     if embedder is not None:
@@ -101,6 +102,15 @@ def _index_commits(
     for start in range(0, len(todo), options.batch_size):
         batch = todo[start : start + options.batch_size]
         store.add_records([repo.read_commit(h) for h in batch])
+        progress.advance(len(batch))
+
+
+def _fingerprint(repo: Pygit2Repo, store: Store, progress: Progress, options: IndexOptions) -> None:
+    """Hash the changed lines of fix, security and revert commits (Regression Memory)."""
+    lines.ensure_version(store)
+    progress.stage("risk lines", lines.count_pending(store))
+    while batch := lines.pending(store, options.batch_size):
+        lines.save(store, [(i, repo.commit_lines(h, limit=lines.MAX_LINES)) for i, h in batch])
         progress.advance(len(batch))
 
 

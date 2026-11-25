@@ -34,6 +34,14 @@ from sprout.models.index import (
     SearchMode,
     SearchResults,
 )
+from sprout.models.risk import (
+    ChangedLine,
+    RiskCard,
+    RiskFinding,
+    RiskKind,
+    RiskLevel,
+    Verdict,
+)
 from sprout.models.setup import (
     Agent,
     ConfigAction,
@@ -50,6 +58,7 @@ __all__ = [
     "AnswerMode",
     "ChangeKind",
     "ChangedFile",
+    "ChangedLine",
     "Commit",
     "CommitExplanation",
     "CommitRecord",
@@ -72,11 +81,16 @@ __all__ = [
     "Person",
     "RepoStatus",
     "RevertLink",
+    "RiskCard",
+    "RiskFinding",
+    "RiskKind",
+    "RiskLevel",
     "SearchHit",
     "SearchMode",
     "SearchResults",
     "Sentence",
     "ServerCommand",
     "UninstallReport",
+    "Verdict",
     "WhyAnswer",
 ]

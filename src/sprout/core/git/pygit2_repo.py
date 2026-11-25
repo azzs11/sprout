@@ -9,7 +9,7 @@ import pygit2
 from pygit2.enums import DeltaStatus, FileStatus, ObjectType, SortMode
 
 from sprout.core.git.convert import DELTA_KINDS, EMPTY_TREE, commit_model
-from sprout.core.git.reader import commit_patch, file_patch, read_commit
+from sprout.core.git.reader import commit_lines, commit_patch, diff_lines, file_patch, read_commit
 from sprout.errors import (
     BareRepositoryError,
     NoCommitsError,
@@ -18,6 +18,7 @@ from sprout.errors import (
     RevisionNotFoundError,
 )
 from sprout.models import (
+    ChangedLine,
     ChangeKind,
     Commit,
     CommitRecord,
@@ -127,6 +128,24 @@ class Pygit2Repo:
         raw = index.diff_to_tree(self._head_tree()) if staged else index.diff_to_workdir()
         raw.find_similar()
         return Diff(staged=staged, files=[_file_diff(patch) for patch in raw if patch is not None])
+
+    def uncommitted_lines(self, *, staged_only: bool, limit: int = 20_000) -> list[ChangedLine]:
+        """Lines changed since HEAD: staged ones only, or everything in the working tree.
+
+        Untracked files are not included (``git add -N`` makes them count).
+        """
+        self._require_worktree()
+        if staged_only:
+            index = self._repo.index
+            index.read(False)
+            raw = index.diff_to_tree(self._head_tree(), context_lines=0)
+        else:
+            raw = self._head_tree().diff_to_workdir(context_lines=0)
+        return diff_lines(raw, limit)
+
+    def commit_lines(self, hash_: str, *, limit: int = 2_000) -> list[ChangedLine]:
+        """Added and removed lines of one commit, at most ``limit`` of them."""
+        return commit_lines(self._repo, self._commit(hash_), limit)
 
     def _head_tree(self) -> pygit2.Tree:
         if not self._repo.head_is_unborn:

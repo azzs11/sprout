@@ -11,7 +11,7 @@ from sprout.core.code.languages import spec_for_path
 from sprout.core.code.symbols import Definition, blank_rows, definitions, symbols_for_lines
 from sprout.core.git.convert import DELTA_KINDS, EMPTY_TREE, commit_model
 from sprout.core.git.message import parse_message
-from sprout.models import ChangedFile, ChangeKind, CommitRecord, Hunk, MessageInfo
+from sprout.models import ChangedFile, ChangedLine, ChangeKind, CommitRecord, Hunk, MessageInfo
 
 MAX_FILES = 300  # vendored imports and mass renames are cut here
 MAX_TERMS = 400
@@ -39,6 +39,40 @@ def read_commit(repo: pygit2.Repository, commit: pygit2.Commit) -> CommitRecord:
         files_truncated=len(patches) > MAX_FILES,
         code_terms=list(terms)[:MAX_TERMS],
     )
+
+
+def commit_lines(repo: pygit2.Repository, commit: pygit2.Commit, limit: int) -> list[ChangedLine]:
+    """Added and removed lines of ``commit`` against its first parent (none for merges)."""
+    if len(commit.parent_ids) > 1:
+        return []
+    diff = _base_tree(repo, commit).diff_to_tree(commit.tree, context_lines=0, interhunk_lines=0)
+    return diff_lines(diff, limit)
+
+
+def diff_lines(diff: pygit2.Diff, limit: int) -> list[ChangedLine]:
+    """Added and removed lines of ``diff``, skipping binary files, at most ``limit`` of them."""
+    diff.find_similar()
+    out: list[ChangedLine] = []
+    for patch in diff:
+        if patch is None or patch.delta.is_binary:
+            continue
+        new_path, old_path = patch.delta.new_file.path, patch.delta.old_file.path
+        for hunk in patch.hunks:
+            for line in hunk.lines:
+                if line.origin not in "+-":
+                    continue
+                added = line.origin == "+"
+                out.append(
+                    ChangedLine(
+                        path=new_path if added else old_path,
+                        added=added,
+                        text=line.content.rstrip("\r\n"),
+                        line=max(line.new_lineno if added else line.old_lineno, 0),
+                    )
+                )
+                if len(out) >= limit:
+                    return out
+    return out
 
 
 def commit_patch(repo: pygit2.Repository, commit: pygit2.Commit, max_chars: int) -> str:
