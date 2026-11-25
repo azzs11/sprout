@@ -35,6 +35,9 @@ from sprout.models.index import (
     SearchResults,
 )
 from sprout.models.risk import (
+    Ack,
+    AckKind,
+    AckList,
     ChangedLine,
     RiskCard,
     RiskFinding,
@@ -55,6 +58,9 @@ from sprout.models.setup import (
 )
 
 __all__ = [
+    "Ack",
+    "AckKind",
+    "AckList",
     "Agent",
     "AnswerMode",
     "ChangeKind",

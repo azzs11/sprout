@@ -71,6 +71,14 @@ class Pygit2Repo:
         return Path(workdir if workdir else self._repo.path).resolve()
 
     @property
+    def user_name(self) -> str | None:
+        """``user.name`` from git config, if set."""
+        try:
+            return str(self._repo.config["user.name"])
+        except KeyError:
+            return None
+
+    @property
     def is_bare(self) -> bool:
         """True for a repository with no working tree."""
         return bool(self._repo.is_bare)

@@ -61,12 +61,17 @@ class _Hit:
 
 
 def check_changes(
-    store: Store, changed: Sequence[ChangedLine], *, before: int | None = None
+    store: Store,
+    changed: Sequence[ChangedLine],
+    *,
+    before: int | None = None,
+    ignore: frozenset[str] = frozenset(),
 ) -> RiskCard:
     """Compare a change's added and removed lines with the history index.
 
     With ``before`` (a Unix time), only commits made before it count: used to replay history
-    without letting later commits leak into the answer.
+    without letting later commits leak into the answer. Findings citing a commit in ``ignore``
+    (from ``sprout ack`` / ``sprout supersede``) are left out, and a note says how many.
     """
     added, removed = _side(changed, added=True), _side(changed, added=False)
     for moved in added.keys() & removed.keys():  # moved or re-indented within this change
@@ -88,9 +93,14 @@ def check_changes(
         finding = _finding(store, commit_id, guard, hit)
         if finding is not None:
             found.append(finding)
-    findings = sorted(_per_commit(found), key=_rank)[:MAX_FINDINGS]
+    merged = _per_commit(found)
+    kept = [f for f in merged if f.commit.hash not in ignore]
+    hidden = len(merged) - len(kept)
+    findings = sorted(kept, key=_rank)[:MAX_FINDINGS]
     level = max((f.level for f in findings), key=_LEVELS.index, default=RiskLevel.LOW)
     notes = [] if store.count("SELECT count(*) FROM line_commits") else [_NO_LINES]
+    if hidden:
+        notes.append(f"{hidden} finding{'s' if hidden > 1 else ''} hidden by .sprout-acks.toml.")
     return RiskCard(
         level=level,
         verdict=_VERDICTS[level],

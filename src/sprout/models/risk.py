@@ -71,3 +71,28 @@ class RiskCard(Model):
     checked_lines: int = Field(description="Changed lines compared with history.")
     method: str = Field(description="Matching rules version, e.g. risk@2.")
     notes: list[str] = Field(default_factory=list)
+
+
+class AckKind(StrEnum):
+    """Why a commit's warnings are switched off."""
+
+    ACK = "ack"  # the risk is known and accepted
+    SUPERSEDE = "supersede"  # the fix or revert no longer applies (e.g. the code was redesigned)
+
+
+class Ack(Model):
+    """One entry of ``.sprout-acks.toml``: Sprout stops warning about this commit."""
+
+    commit: str = Field(description="Full hash of the cited fix, security or revert commit.")
+    kind: AckKind
+    reason: str
+    by: str = Field(description="Who acknowledged it (git user.name).")
+    date: str = Field(description="YYYY-MM-DD.")
+    superseded_by: str | None = Field(default=None, description="The commit that replaced it.")
+
+
+class AckList(Model):
+    """Everything in ``.sprout-acks.toml``."""
+
+    path: str
+    acks: list[Ack]
