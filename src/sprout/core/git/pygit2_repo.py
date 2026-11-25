@@ -69,6 +69,11 @@ class Pygit2Repo:
         workdir = self._repo.workdir
         return Path(workdir if workdir else self._repo.path).resolve()
 
+    @property
+    def is_bare(self) -> bool:
+        """True for a repository with no working tree."""
+        return bool(self._repo.is_bare)
+
     def relative_path(self, path: Path) -> str:
         """Convert a filesystem path to a POSIX path relative to the root."""
         absolute = path if path.is_absolute() else Path.cwd() / path

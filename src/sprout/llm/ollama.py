@@ -37,6 +37,22 @@ class OllamaProvider:
         except httpx.HTTPError:
             return False
 
+    def has_model(self) -> bool:
+        """True if the server answers and has this model pulled."""
+        try:
+            response = self._client.get("/api/tags", timeout=0.5)
+        except httpx.HTTPError:
+            return False
+        if not response.is_success:
+            return False
+        names = {str(m.get("name", "")) for m in response.json().get("models", [])}
+        return self._model in names or f"{self._model}:latest" in names
+
+    @property
+    def model(self) -> str:
+        """The model name, e.g. ``qwen2.5-coder:7b``."""
+        return self._model
+
     def complete(
         self, *, system: str, prompt: str, max_tokens: int, schema: JsonSchema | None = None
     ) -> str:

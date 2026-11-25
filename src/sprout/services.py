@@ -61,3 +61,22 @@ def build_answerer(settings: Settings) -> tuple[Answerer | None, str | None]:
 def build_summariser(settings: Settings) -> Summariser:
     """A summariser over the configured provider."""
     return Summariser(build_provider(settings))
+
+
+def describe_answers(settings: Settings) -> str:
+    """One line on where written ``why`` answers will come from, or what to do to get them."""
+    model = settings.resolved_llm_model
+    if settings.llm_provider == "none":
+        return "Facts only, because SPROUT_LLM_PROVIDER is none."
+    if settings.llm_provider == "anthropic":
+        if settings.anthropic_api_key is None:
+            return "Facts only: SPROUT_LLM_PROVIDER is anthropic but ANTHROPIC_API_KEY is not set."
+        return f"Written by {model} with your Anthropic key. Redacted code leaves this machine."
+    from sprout.llm.ollama import OllamaProvider
+
+    ollama = OllamaProvider(model, base_url=settings.ollama_url)
+    if not ollama.available():
+        return "Facts only: Ollama is not running. Start it for written answers (they stay local)."
+    if not ollama.has_model():
+        return f"Facts only: Ollama is running but {model} is not pulled. Run: ollama pull {model}"
+    return f"Written by {model} through Ollama, on this machine."

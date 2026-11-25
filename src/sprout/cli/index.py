@@ -80,7 +80,7 @@ def index(
                         options=options,
                     )
                 else:
-                    with _RichProgress() as progress:
+                    with RichProgress() as progress:
                         stats = build_index(
                             git,
                             store,
@@ -135,7 +135,7 @@ def _delete_index(base: Path) -> None:
         (base / INDEX_DIR / f"{INDEX_FILE}{suffix}").unlink(missing_ok=True)
 
 
-class _RichProgress:
+class RichProgress:
     """Progress bars on stderr, one per stage, with an ETA."""
 
     def __init__(self) -> None:
@@ -151,7 +151,7 @@ class _RichProgress:
         )
         self._task: TaskID | None = None
 
-    def __enter__(self) -> _RichProgress:
+    def __enter__(self) -> RichProgress:
         self._bars.start()
         return self
 
