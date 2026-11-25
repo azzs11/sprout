@@ -20,7 +20,7 @@ from sprout.core.index.store import Store
 from sprout.core.retrieve.hybrid import search
 from sprout.core.risk import acks
 from sprout.core.risk.check import check_changes
-from sprout.core.risk.edits import file_edit_lines
+from sprout.core.risk.edits import file_change
 from sprout.core.risk.patch import parse_unified
 from sprout.errors import IndexNotFoundError, SproutError
 from sprout.models import CommitExplanation, RiskCard, SearchResults, WhyAnswer
@@ -93,7 +93,7 @@ class Session:
             if diff is not None:
                 changed = parse_unified(diff)
             elif path is not None and new is not None:
-                changed = file_edit_lines(self.repo, path, old, new)
+                changed = file_change(self.repo, path, [(old, new)])[1]
             else:
                 changed = self.repo.uncommitted_lines(staged_only=False)
             store = self._open_store()

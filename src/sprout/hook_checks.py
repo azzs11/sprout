@@ -13,7 +13,7 @@ from sprout.core.git.pygit2_repo import Pygit2Repo
 from sprout.core.index.store import Store
 from sprout.core.risk import acks
 from sprout.core.risk.check import check_changes
-from sprout.core.risk.edits import file_edit_lines
+from sprout.core.risk.edits import file_change
 from sprout.errors import IndexNotFoundError
 from sprout.models import ChangedLine, Label, RiskCard, RiskFinding, RiskKind, RiskLevel
 
@@ -55,8 +55,8 @@ def agent(event: Event, stdout: IO[str]) -> int:
     found = _event_lines(event)
     if found is None:
         return 0
-    repo, changed = found
-    shown = _shown(_check(repo, changed))
+    repo, before, after = found
+    shown = _new_or_stronger(_shown(_check(repo, before)), _shown(_check(repo, after)))
     if not shown:
         return 0
     note = "\n".join(
@@ -77,8 +77,10 @@ def agent(event: Event, stdout: IO[str]) -> int:
     return 0
 
 
-def _event_lines(event: Event) -> tuple[Pygit2Repo, list[ChangedLine]] | None:
-    """The repository and changed lines of an Edit, MultiEdit or Write event."""
+def _event_lines(
+    event: Event,
+) -> tuple[Pygit2Repo, list[ChangedLine], list[ChangedLine]] | None:
+    """The repository, and the file's changed lines before and after an Edit/MultiEdit/Write."""
     tool = event.get("tool_name")
     data = event.get("tool_input")
     if not isinstance(data, dict):
@@ -91,13 +93,22 @@ def _event_lines(event: Event) -> tuple[Pygit2Repo, list[ChangedLine]] | None:
     parent = Path(raw).parent
     repo = open_repo(parent if parent.is_dir() else str(cwd or "."))
     if tool == "Write":
-        return repo, file_edit_lines(repo, raw, None, str(tool_input.get("content", "")))
-    edits = tool_input.get("edits") if tool == "MultiEdit" else [tool_input]
-    changed: list[ChangedLine] = []
-    for item in cast("list[Event]", edits if isinstance(edits, list) else []):
-        old, new = str(item.get("old_string", "")), str(item.get("new_string", ""))
-        changed += file_edit_lines(repo, raw, old, new)
-    return repo, changed
+        edits: list[tuple[str | None, str]] = [(None, str(tool_input.get("content", "")))]
+    else:
+        items = tool_input.get("edits") if tool == "MultiEdit" else [tool_input]
+        edits = [
+            (str(item.get("old_string", "")), str(item.get("new_string", "")))
+            for item in cast("list[Event]", items if isinstance(items, list) else [])
+        ]
+    before, after = file_change(repo, raw, edits)
+    return repo, before, after
+
+
+def _new_or_stronger(before: list[RiskFinding], after: list[RiskFinding]) -> list[RiskFinding]:
+    """Findings this edit creates or raises, so earlier, already-seen ones are not repeated."""
+    rank = [RiskLevel.LOW, RiskLevel.REVIEW, RiskLevel.HIGH]
+    seen = {f.commit.hash: rank.index(f.level) for f in before}
+    return [f for f in after if rank.index(f.level) > seen.get(f.commit.hash, -1)]
 
 
 def _check(repo: Pygit2Repo, changed: list[ChangedLine]) -> RiskCard | None:

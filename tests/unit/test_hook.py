@@ -17,7 +17,7 @@ from sprout import hook, hook_checks
 from sprout.core.git import open_repo
 from sprout.core.index.indexer import build_index
 from sprout.core.index.store import Store
-from sprout.core.risk.edits import edit_lines, line_of
+from sprout.core.risk.edits import edit_lines
 from sprout.core.setup import git_hook
 from sprout.errors import SproutError
 from sprout.models import ConfigAction
@@ -69,11 +69,6 @@ def test_edit_lines() -> None:
         (True, "RETRIES = 0", 11),
     ]
     assert [c.added for c in edit_lines("a.py", "", "new line here")] == [True]
-
-
-def test_line_of() -> None:
-    assert line_of("a\nb\nRETRIES = 3\n", "RETRIES = 3") == 3
-    assert line_of("a\nb\n", "missing") == 1
 
 
 # ----- agent hook ---------------------------------------------------------------------
@@ -131,6 +126,30 @@ def test_multiedit_and_write(shop: RepoBuilder) -> None:
     out = run_agent(write)
     assert out is not None
     assert "-import hmac" in out["additionalContext"]
+
+
+def test_a_change_split_across_edits_is_seen_as_one(shop: RepoBuilder) -> None:
+    auth = shop.root / "src/auth.py"
+    first = edit(shop, "src/auth.py", "import hmac\n\n", "")
+    assert run_agent(first) is None  # one of the fix's two lines: not enough on its own
+    auth.write_text(auth.read_text().replace("import hmac\n\n", ""))
+    second = edit(
+        shop,
+        "src/auth.py",
+        "    return hmac.compare_digest(token[:2], 't_')",
+        "    return token.startswith('t_')",
+    )
+    out = run_agent(second)
+    assert out is not None
+    assert "-import hmac" in out["additionalContext"]
+
+
+def test_a_finding_already_on_disk_is_not_repeated(shop: RepoBuilder) -> None:
+    payments = shop.root / "src/payments.py"
+    payments.write_text(payments.read_text().replace("RETRIES = 3", "RETRIES = 0"))
+    assert (
+        run_agent(edit(shop, "src/payments.py", "return amount > 0", "return amount >= 1")) is None
+    )
 
 
 def test_unrelated_edits_are_silent(shop: RepoBuilder) -> None:

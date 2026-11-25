@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import difflib
+from collections.abc import Sequence
 from pathlib import Path
 
 from sprout.core.git.pygit2_repo import Pygit2Repo
@@ -30,17 +31,14 @@ def edit_lines(path: str, old: str, new: str, *, start: int = 1) -> list[Changed
     return out
 
 
-def line_of(text: str, snippet: str) -> int:
-    """1-based line where ``snippet`` first starts in ``text`` (1 if it is not found)."""
-    index = text.find(snippet) if snippet else -1
-    return text.count("\n", 0, index) + 1 if index >= 0 else 1
+def file_change(
+    repo: Pygit2Repo, path: str, edits: Sequence[tuple[str | None, str]]
+) -> tuple[list[ChangedLine], list[ChangedLine]]:
+    """The whole file's changed lines against HEAD, before and after a proposed edit.
 
-
-def file_edit_lines(repo: Pygit2Repo, path: str, old: str | None, new: str) -> list[ChangedLine]:
-    """Changed lines of a proposed edit to ``path`` (absolute or relative to the repository root).
-
-    ``old=None`` means the whole file is replaced by ``new`` (a Write). Otherwise ``old`` is the
-    text being replaced, found in the current file to number the lines.
+    Comparing the whole file means a change split across several small edits is still seen as
+    one change. ``edits`` are ``(old, new)`` pairs applied in order; ``old=None`` replaces the
+    whole file (a Write). An ``old`` text that is not in the file is checked on its own.
 
     Raises:
         PathOutsideRepositoryError: ``path`` is not inside the repository.
@@ -48,6 +46,21 @@ def file_edit_lines(repo: Pygit2Repo, path: str, old: str | None, new: str) -> l
     file = Path(path) if Path(path).is_absolute() else repo.root / path
     rel = repo.relative_path(file)
     current = file.read_text(encoding="utf-8", errors="replace") if file.is_file() else ""
-    if old is None:
-        return edit_lines(rel, current, new)
-    return edit_lines(rel, old, new, start=line_of(current, old))
+    head = _head_text(repo, rel)
+    proposed, unplaced = current, list[ChangedLine]()
+    for old, new in edits:
+        if old is None:
+            proposed = new
+        elif old and old in proposed:
+            proposed = proposed.replace(old, new, 1)
+        else:
+            unplaced += edit_lines(rel, old, new)
+    return edit_lines(rel, head, current), edit_lines(rel, head, proposed) + unplaced
+
+
+def _head_text(repo: Pygit2Repo, path: str) -> str:
+    head = repo.head_hash
+    if head is None:  # no commits yet
+        return ""
+    data = repo.read_file(head, path)
+    return data.decode("utf-8", errors="replace") if data is not None else ""
