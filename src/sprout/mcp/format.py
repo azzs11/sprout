@@ -6,7 +6,7 @@ into ``git show``.
 
 from __future__ import annotations
 
-from sprout.core.answer.rationale import score_message
+from sprout.core.answer.reasons import vet_reason
 from sprout.models import AnswerMode, Evidence, IssueRef, Label, SearchHit, SearchResults, WhyAnswer
 
 HASH = 12
@@ -83,7 +83,7 @@ def _basis(quotes: list[str | None]) -> str:
 
 
 def _quote(e: Evidence) -> str | None:
-    excerpt = score_message(e.commit.message, labels=e.labels, refs=len(e.refs)).excerpt
+    excerpt = vet_reason(None, e.commit.message).quote
     return _clip(excerpt, _QUOTE) if excerpt else None
 
 
