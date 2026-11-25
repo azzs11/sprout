@@ -88,6 +88,12 @@ The level is a word (`low`, `review`, `high`), not a colour. `high` means undoin
 
 `sprout risk` is advisory: it exits 0 unless a finding involves a past security fix (exit 2), or you pass `--strict` (exit 2 on any finding). `SPROUT_SKIP=1` skips the check. No model is called.
 
+**Hooks.** The same check runs before a commit and before an AI agent edits a file. Neither calls a model or the network, and both stay silent in a repository with no Sprout index:
+
+- `sprout init --git-hook` installs a git pre-commit hook (it never replaces a hook it did not write; `sprout uninstall` removes it). Findings are printed as advice and the commit goes ahead, unless it undoes a past security fix. Pre-commit framework users can use the `sprout-risk` hook from this repository's `.pre-commit-hooks.yaml`.
+- The Claude Code plugin checks every Edit and Write. A review finding becomes a note to the agent, and the edit goes ahead. A high finding (re-applying a reverted change, or undoing a security fix) asks you first.
+- `SPROUT_RISK_LEVEL=high` shows only high findings, `SPROUT_STRICT=1` blocks on any finding, and `SPROUT_SKIP=1` skips the check. `sprout risk --level high` does the same by hand.
+
 **Measured: revert replay v0.** Every commit in 12 repositories that were not used for tuning is replayed against only the history before it ([benchmark card](bench/risk/README.md)). A commit counts as positive if it was later reverted, or if a fix within a year removed a line it added. From [`risk-replay-v0-test.md`](bench/results/risk-replay-v0-test.md) and [`risk-replay-v0-holdout.md`](bench/results/risk-replay-v0-holdout.md):
 
 | `risk@2` | Commits | Sprout warns on | Precision of a warning | Random at the same rate | Recent-fix file baseline (warns on) |

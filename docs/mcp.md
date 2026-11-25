@@ -61,6 +61,23 @@ sprout mcp serve
 
 To use HTTP instead of stdio, run `sprout mcp serve --http`, which serves `http://127.0.0.1:8765/mcp` (pick another port with `--port`). Requests whose Host or Origin header is not local are rejected. There is no authentication, so only bind to another address on a network you trust.
 
+## The edit check (Claude Code plugin)
+
+The plugin also runs `sprout-hook agent` before every Edit, MultiEdit and Write. It compares the edit with past fix, security and revert commits, the same way `sprout risk` does (no model, no network):
+
+- **Nothing found**, or no Sprout index in the repository: no output, and the edit goes ahead.
+- **Review finding** (the edit undoes most of a past fix, or changes code a revert restored): the edit goes ahead, and the agent gets a note citing the commit.
+- **High finding** (it re-applies a reverted change, or undoes a security fix): Claude Code asks you first and shows the cited commits.
+
+The check needs `sprout-hook` on your PATH. Install it once with `uv tool install git+https://github.com/azzs11/sprout`. Without it the hook does nothing: it never blocks an edit because of missing setup, and it never uses the network.
+
+| Variable | Effect |
+|---|---|
+| `SPROUT_RISK_LEVEL=high` | Only high findings (no notes for review findings) |
+| `SPROUT_STRICT=1` | High findings are refused, not asked about |
+| `SPROUT_SKIP=1` | No check |
+| `SPROUT_DEBUG=1` | Print hook errors (normally a failing check stays silent) |
+
 ## Tell the agent when to use it
 
 The server's instructions already ask agents to call `why` before changing code they did not write. To make it a project rule, add this to your `AGENTS.md` or `CLAUDE.md`:
