@@ -86,7 +86,16 @@ Some rules keep it quiet:
 
 The level is a word (`low`, `review`, `high`), not a colour. `high` means undoing a security fix or re-applying most of a reverted change. With nothing to cite it stays silent.
 
-`sprout risk` is advisory: it exits 0 unless a finding involves a past security fix (exit 2), or you pass `--strict` (exit 2 on any finding). `SPROUT_SKIP=1` skips the check. No model is called. How often it is right is not measured yet; the revert-replay benchmark comes next.
+`sprout risk` is advisory: it exits 0 unless a finding involves a past security fix (exit 2), or you pass `--strict` (exit 2 on any finding). `SPROUT_SKIP=1` skips the check. No model is called.
+
+**Measured: revert replay v0.** Every commit in 12 repositories that were not used for tuning is replayed against only the history before it ([benchmark card](bench/risk/README.md)). A commit counts as positive if it was later reverted, or if a fix within a year removed a line it added. From [`risk-replay-v0-test.md`](bench/results/risk-replay-v0-test.md) and [`risk-replay-v0-holdout.md`](bench/results/risk-replay-v0-holdout.md):
+
+| `risk@2` | Commits | Sprout warns on | Precision of a warning | Random at the same rate | Recent-fix file baseline (warns on) |
+|---|---|---|---|---|---|
+| test (8 repos) | 35,758 | 8.4% | 0.318 | 0.147 | 0.212 (37.7%) |
+| holdout (4 repos) | 7,974 | 8.7% | 0.301 | 0.140 | 0.234 (35.0%) |
+
+So a warning points at a change that later needed fixing about twice as often as chance. It rarely predicts an actual revert: it caught 22 of 155 reverts on test and 1 of 24 on holdout, where its revert precision is no better than random. At the same 5% alert budget, simply ranking commits by how many recent fixes touched their files does better on holdout (0.386 vs 0.313) and slightly worse on test (0.330 vs 0.351). The card lists the known biases, including that the "fixed later" label and Sprout's own warnings both lean on fix commits.
 
 ### Measured: WhyBench v0
 
