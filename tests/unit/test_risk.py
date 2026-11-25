@@ -33,7 +33,7 @@ def edit(repo: RepoBuilder, path: str, old: str, new: str) -> None:
     file = repo.root / path
     text = file.read_text()
     assert old in text
-    file.write_text(text.replace(old, new))
+    file.write_text(text.replace(old, new), newline="\n")  # LF on Windows too: autocrlf is off
 
 
 @pytest.fixture
