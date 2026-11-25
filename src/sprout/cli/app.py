@@ -8,6 +8,7 @@ from typing import Annotated
 import typer
 
 from sprout import __version__
+from sprout.cli.ack import ack, supersede
 from sprout.cli.diff import diff
 from sprout.cli.history import history
 from sprout.cli.index import index
@@ -37,6 +38,8 @@ app.command()(index)
 app.command()(search)
 app.command()(why)
 app.command()(risk)
+app.command()(ack)
+app.command()(supersede)
 app.command()(init)
 app.command()(uninstall)
 app.add_typer(mcp_app)

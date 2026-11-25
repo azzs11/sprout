@@ -14,6 +14,7 @@ from rich.text import Text
 from sprout.cli.output import JsonOption, RepoOption, emit, handle_errors
 from sprout.core.git import open_repo
 from sprout.core.index.store import Store
+from sprout.core.risk import acks
 from sprout.core.risk.check import check_changes
 from sprout.core.risk.patch import parse_unified
 from sprout.models import Label, RiskCard, RiskFinding, RiskKind, RiskLevel, Verdict
@@ -61,7 +62,8 @@ def risk(
             text = sys.stdin.read() if str(diff) == "-" else diff.read_text(encoding="utf-8")
             changed = parse_unified(text)
         with Store.open(git.root, create=False) as store:
-            card = at_level(check_changes(store, changed), level)
+            ignore = frozenset(a.commit for a in acks.load(git.root))
+            card = at_level(check_changes(store, changed, ignore=ignore), level)
         emit(card, as_json=as_json, render=render_card)
     if blocks(card, strict=strict):
         raise typer.Exit(code=BLOCKED)
@@ -97,8 +99,8 @@ def render_card(card: RiskCard, out: Console) -> None:
     """Render a ``RiskCard``: the level as a word, then 1-3 explaining commits."""
     if not card.checked_lines:
         out.print("No changed lines to check.")
-    elif not card.findings and any("hidden by --level" in n for n in card.notes):
-        out.print(f"{_LEVEL[RiskLevel.LOW]}: no high-level findings.")
+    elif not card.findings and any(" hidden by " in n for n in card.notes):
+        out.print(f"{_LEVEL[RiskLevel.LOW]}: no findings left to show (see below).")
     elif not card.findings:
         out.print(
             f"{_LEVEL[RiskLevel.LOW]}: none of the {card.checked_lines} changed lines match a past"

@@ -11,6 +11,7 @@ from typing import IO, cast
 from sprout.core.git import open_repo
 from sprout.core.git.pygit2_repo import Pygit2Repo
 from sprout.core.index.store import Store
+from sprout.core.risk import acks
 from sprout.core.risk.check import check_changes
 from sprout.core.risk.edits import edit_lines, line_of
 from sprout.errors import IndexNotFoundError
@@ -106,7 +107,7 @@ def _check(repo: Pygit2Repo, changed: list[ChangedLine]) -> RiskCard | None:
         return None
     try:
         with Store.open(repo.root, create=False) as store:
-            return check_changes(store, changed)
+            return check_changes(store, changed, ignore=acks.ignored(repo.root))
     except IndexNotFoundError:
         return None
 

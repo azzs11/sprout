@@ -109,4 +109,4 @@ def test_level_high_hides_review_findings_and_says_so(shop: RepoBuilder) -> None
     assert got["notes"] == ["1 review-level finding hidden by --level high."]
     code, output = run("risk", "-C", str(shop.root), "--level", "high")
     assert code == 0
-    assert output.startswith("✓ low: no high-level findings.")
+    assert output.startswith("✓ low: no findings left to show (see below).")
