@@ -12,6 +12,7 @@ from sprout.cli.diff import diff
 from sprout.cli.history import history
 from sprout.cli.index import index
 from sprout.cli.mcp import mcp_app
+from sprout.cli.risk import risk
 from sprout.cli.search import search
 from sprout.cli.setup import init, uninstall
 from sprout.cli.status import status
@@ -35,6 +36,7 @@ app.command()(history)
 app.command()(index)
 app.command()(search)
 app.command()(why)
+app.command()(risk)
 app.command()(init)
 app.command()(uninstall)
 app.add_typer(mcp_app)
