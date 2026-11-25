@@ -4,6 +4,8 @@ WhyBench measures whether a tool can find **the commit that explains why code is
 
 Status: **v0, a first public draft.** The numbers in `results/` are produced by the commands below and nowhere else.
 
+The Regression Memory benchmark (revert replay for `sprout risk`) has its own card: [`risk/README.md`](risk/README.md).
+
 ## Tasks
 
 | Kind | Input | Gold | How it is built |

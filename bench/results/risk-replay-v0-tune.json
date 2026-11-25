@@ -1,0 +1,352 @@
+{
+  "labels": {
+    "reverted": {
+      "sprout": {
+        "commits": 4668,
+        "positives": 14,
+        "alerts": 259,
+        "hits": 2,
+        "precision": 0.007722007722007722,
+        "recall": 0.14285714285714285,
+        "alert_rate": 0.055484147386461014,
+        "precision_ci": [
+          0.0,
+          0.0209
+        ],
+        "recall_ci": [
+          0.0,
+          0.3636
+        ],
+        "lead_days": 31.8
+      },
+      "baseline": {
+        "commits": 4668,
+        "positives": 14,
+        "alerts": 1475,
+        "hits": 6,
+        "precision": 0.004067796610169492,
+        "recall": 0.42857142857142855,
+        "alert_rate": 0.31598114824335904,
+        "precision_ci": [
+          0.0013,
+          0.0074
+        ],
+        "recall_ci": [
+          0.1538,
+          0.7
+        ],
+        "lead_days": 0.1
+      },
+      "random": {
+        "alert_rate": 0.055484147386461014,
+        "precision": 0.0029991431019708655,
+        "recall": 0.055484147386461014
+      },
+      "budgets": {
+        "sprout": [
+          {
+            "budget": 0.05,
+            "commits": 4668,
+            "positives": 14,
+            "alerts": 234,
+            "hits": 2,
+            "precision": 0.008547008547008548,
+            "recall": 0.14285714285714285,
+            "alert_rate": 0.05012853470437018
+          },
+          {
+            "budget": 0.1,
+            "commits": 4668,
+            "positives": 14,
+            "alerts": 259,
+            "hits": 2,
+            "precision": 0.007722007722007722,
+            "recall": 0.14285714285714285,
+            "alert_rate": 0.055484147386461014
+          },
+          {
+            "budget": 0.5,
+            "commits": 4668,
+            "positives": 14,
+            "alerts": 259,
+            "hits": 2,
+            "precision": 0.007722007722007722,
+            "recall": 0.14285714285714285,
+            "alert_rate": 0.055484147386461014
+          }
+        ],
+        "baseline": [
+          {
+            "budget": 0.05,
+            "commits": 4668,
+            "positives": 14,
+            "alerts": 234,
+            "hits": 2,
+            "precision": 0.008547008547008548,
+            "recall": 0.14285714285714285,
+            "alert_rate": 0.05012853470437018
+          },
+          {
+            "budget": 0.1,
+            "commits": 4668,
+            "positives": 14,
+            "alerts": 467,
+            "hits": 4,
+            "precision": 0.008565310492505354,
+            "recall": 0.2857142857142857,
+            "alert_rate": 0.10004284490145672
+          },
+          {
+            "budget": 0.5,
+            "commits": 4668,
+            "positives": 14,
+            "alerts": 1475,
+            "hits": 6,
+            "precision": 0.004067796610169492,
+            "recall": 0.42857142857142855,
+            "alert_rate": 0.31598114824335904
+          }
+        ]
+      }
+    },
+    "induced": {
+      "sprout": {
+        "commits": 4668,
+        "positives": 578,
+        "alerts": 259,
+        "hits": 61,
+        "precision": 0.23552123552123552,
+        "recall": 0.10553633217993079,
+        "alert_rate": 0.055484147386461014,
+        "precision_ci": [
+          0.1828,
+          0.287
+        ],
+        "recall_ci": [
+          0.0802,
+          0.1323
+        ],
+        "lead_days": 31.8
+      },
+      "baseline": {
+        "commits": 4668,
+        "positives": 578,
+        "alerts": 1475,
+        "hits": 291,
+        "precision": 0.19728813559322034,
+        "recall": 0.5034602076124568,
+        "alert_rate": 0.31598114824335904,
+        "precision_ci": [
+          0.1778,
+          0.218
+        ],
+        "recall_ci": [
+          0.4628,
+          0.5428
+        ],
+        "lead_days": 0.1
+      },
+      "random": {
+        "alert_rate": 0.055484147386461014,
+        "precision": 0.12382176520994002,
+        "recall": 0.055484147386461014
+      },
+      "budgets": {
+        "sprout": [
+          {
+            "budget": 0.05,
+            "commits": 4668,
+            "positives": 578,
+            "alerts": 234,
+            "hits": 54,
+            "precision": 0.23076923076923078,
+            "recall": 0.09342560553633218,
+            "alert_rate": 0.05012853470437018
+          },
+          {
+            "budget": 0.1,
+            "commits": 4668,
+            "positives": 578,
+            "alerts": 259,
+            "hits": 61,
+            "precision": 0.23552123552123552,
+            "recall": 0.10553633217993079,
+            "alert_rate": 0.055484147386461014
+          },
+          {
+            "budget": 0.5,
+            "commits": 4668,
+            "positives": 578,
+            "alerts": 259,
+            "hits": 61,
+            "precision": 0.23552123552123552,
+            "recall": 0.10553633217993079,
+            "alert_rate": 0.055484147386461014
+          }
+        ],
+        "baseline": [
+          {
+            "budget": 0.05,
+            "commits": 4668,
+            "positives": 578,
+            "alerts": 234,
+            "hits": 83,
+            "precision": 0.3547008547008547,
+            "recall": 0.14359861591695502,
+            "alert_rate": 0.05012853470437018
+          },
+          {
+            "budget": 0.1,
+            "commits": 4668,
+            "positives": 578,
+            "alerts": 467,
+            "hits": 134,
+            "precision": 0.28693790149892934,
+            "recall": 0.23183391003460208,
+            "alert_rate": 0.10004284490145672
+          },
+          {
+            "budget": 0.5,
+            "commits": 4668,
+            "positives": 578,
+            "alerts": 1475,
+            "hits": 291,
+            "precision": 0.19728813559322034,
+            "recall": 0.5034602076124568,
+            "alert_rate": 0.31598114824335904
+          }
+        ]
+      }
+    }
+  },
+  "per_repo": {
+    "click": {
+      "sprout_reverted": {
+        "commits": 2190,
+        "positives": 7,
+        "alerts": 137,
+        "hits": 2,
+        "precision": 0.014598540145985401,
+        "recall": 0.2857142857142857,
+        "alert_rate": 0.06255707762557078
+      },
+      "sprout_induced": {
+        "commits": 2190,
+        "positives": 339,
+        "alerts": 137,
+        "hits": 38,
+        "precision": 0.2773722627737226,
+        "recall": 0.11209439528023599,
+        "alert_rate": 0.06255707762557078
+      },
+      "baseline_reverted": {
+        "commits": 2190,
+        "positives": 7,
+        "alerts": 938,
+        "hits": 5,
+        "precision": 0.005330490405117271,
+        "recall": 0.7142857142857143,
+        "alert_rate": 0.428310502283105
+      },
+      "baseline_induced": {
+        "commits": 2190,
+        "positives": 339,
+        "alerts": 938,
+        "hits": 216,
+        "precision": 0.2302771855010661,
+        "recall": 0.6371681415929203,
+        "alert_rate": 0.428310502283105
+      }
+    },
+    "httpx": {
+      "sprout_reverted": {
+        "commits": 1486,
+        "positives": 3,
+        "alerts": 73,
+        "hits": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "alert_rate": 0.04912516823687752
+      },
+      "sprout_induced": {
+        "commits": 1486,
+        "positives": 120,
+        "alerts": 73,
+        "hits": 11,
+        "precision": 0.1506849315068493,
+        "recall": 0.09166666666666666,
+        "alert_rate": 0.04912516823687752
+      },
+      "baseline_reverted": {
+        "commits": 1486,
+        "positives": 3,
+        "alerts": 337,
+        "hits": 1,
+        "precision": 0.002967359050445104,
+        "recall": 0.3333333333333333,
+        "alert_rate": 0.22678331090174966
+      },
+      "baseline_induced": {
+        "commits": 1486,
+        "positives": 120,
+        "alerts": 337,
+        "hits": 43,
+        "precision": 0.12759643916913946,
+        "recall": 0.35833333333333334,
+        "alert_rate": 0.22678331090174966
+      }
+    },
+    "cobra": {
+      "sprout_reverted": {
+        "commits": 992,
+        "positives": 4,
+        "alerts": 49,
+        "hits": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "alert_rate": 0.04939516129032258
+      },
+      "sprout_induced": {
+        "commits": 992,
+        "positives": 119,
+        "alerts": 49,
+        "hits": 12,
+        "precision": 0.24489795918367346,
+        "recall": 0.10084033613445378,
+        "alert_rate": 0.04939516129032258
+      },
+      "baseline_reverted": {
+        "commits": 992,
+        "positives": 4,
+        "alerts": 200,
+        "hits": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "alert_rate": 0.20161290322580644
+      },
+      "baseline_induced": {
+        "commits": 992,
+        "positives": 119,
+        "alerts": 200,
+        "hits": 32,
+        "precision": 0.16,
+        "recall": 0.2689075630252101,
+        "alert_rate": 0.20161290322580644
+      }
+    }
+  },
+  "benchmark": "risk-replay-v0",
+  "split": "tune",
+  "method": "risk@2",
+  "lines_version": "1",
+  "date": "2026-11-25T13:10:23+00:00",
+  "sprout_version": "0.1.0",
+  "sprout_commit": "2f1c58682abdfa6c7ca5ebca2cbc830d75206f22",
+  "machine": "Darwin arm64, Python 3.11.18",
+  "repos": {
+    "click": "08b803cf32ceb2ae6a772c62d5da42757a897d44",
+    "httpx": "7cff5f79bc78649bbcd3fd9aa7a74c86e0f63016",
+    "cobra": "adbc8813901bba65827259daa8e22ff94ec1f30e"
+  },
+  "cases_file": "risk-replay-v0-tune.jsonl"
+}
