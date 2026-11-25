@@ -1,0 +1,14 @@
+# For the pre-commit framework (https://pre-commit.com). In your .pre-commit-config.yaml:
+#   - repo: https://github.com/azzs11/sprout
+#     rev: <tag>
+#     hooks:
+#       - id: sprout-risk
+# Run `sprout index` once in the repository; without an index the hook does nothing.
+- id: sprout-risk
+  name: sprout risk (git history check)
+  description: Warns when staged changes undo a past fix or re-apply a reverted change.
+  entry: sprout-hook pre-commit
+  language: python
+  pass_filenames: false
+  always_run: true
+  stages: [pre-commit]

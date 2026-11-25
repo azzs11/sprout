@@ -6,6 +6,7 @@ It adds:
 
 - **The `sprout` MCP server**, with three read-only tools: `why`, `search_history` and `explain_commit`. Answers cite commit hashes, quote the stated reason when there is one, and flag reverts.
 - **The `/sprout:why` skill**, for example `/sprout:why src/auth.py:42`. Claude also uses it on its own before changing code it did not write.
+- **An edit check** before every Edit and Write, with no model and no network. An edit that undoes a past fix gets a note to the agent. One that re-applies a reverted change, or undoes a security fix, asks you first. It needs `sprout-hook` on your PATH: `uv tool install git+https://github.com/azzs11/sprout`. Without it the check does nothing.
 
 ## Install
 

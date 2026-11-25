@@ -1,0 +1,17 @@
+{
+  "description": "Before an Edit, MultiEdit or Write, checks the change against this repository's git history with Sprout (no model, no network). A change that undoes a past fix gets a note for the agent; one that re-applies a reverted change or undoes a security fix asks you first. Silent when sprout-hook is not installed or the repository has no Sprout index.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/check.sh\" || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
