@@ -5,6 +5,7 @@
 
 from sprout.models.answer import (
     AnswerMode,
+    CommitExplanation,
     Evidence,
     EvidenceRole,
     LineHop,
@@ -39,6 +40,7 @@ __all__ = [
     "ChangeKind",
     "ChangedFile",
     "Commit",
+    "CommitExplanation",
     "CommitRecord",
     "Diff",
     "Evidence",

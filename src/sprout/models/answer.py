@@ -8,7 +8,7 @@ from pydantic import Field
 
 from sprout.models.base import Model
 from sprout.models.git import Commit
-from sprout.models.index import IssueRef, Label
+from sprout.models.index import ChangedFile, IssueRef, Label
 
 
 class EvidenceRole(StrEnum):
@@ -75,3 +75,20 @@ class WhyAnswer(Model):
     history: list[LineHop] = Field(default_factory=list[LineHop])
     evidence: list[Evidence]
     notes: list[str] = Field(default_factory=list)
+
+
+class CommitExplanation(Model):
+    """One commit with what it changed, why (if its message says) and its revert links."""
+
+    commit: Commit
+    labels: list[Label]
+    refs: list[IssueRef]
+    reason: str | None = Field(description="The sentence that states why, quoted verbatim.")
+    reverts: list[str] = Field(description="Commits this one reverts (full hashes when found).")
+    reverted_by: list[str] = Field(description="Indexed commits that revert this one.")
+    files: list[ChangedFile]
+    files_truncated: bool
+    patch: str = Field(description="Diff against the first parent, secrets redacted, cut short.")
+    patch_truncated: bool
+    redacted: int = Field(description="How many secrets were replaced in ``patch``.")
+    indexed: bool = Field(description="False when no index was available for revert links.")
