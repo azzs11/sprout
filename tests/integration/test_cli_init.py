@@ -156,3 +156,15 @@ def test_background_indexer_runs_detached(
     stats = json.loads(log.read_text()[log.read_text().index("{") :])
     assert stats["commits"] == 3
     assert log.parent.samefile(repo.root / ".sprout")
+
+
+def test_init_git_hook_and_uninstall_removes_it(make_repo: MakeRepo) -> None:
+    repo = make_repo("linear")
+    report = run_json("init", "-C", str(repo.root), "--git-hook", "--no-embed")
+    hook = Path(report["git_hook"]["path"])
+    assert report["git_hook"]["action"] == "added"
+    assert "sprout-hook pre-commit" in hook.read_text()
+    code, output = run("uninstall", "-C", str(repo.root))
+    assert code == 0, output
+    assert "deleted the pre-commit risk check" in output
+    assert not hook.exists()

@@ -38,6 +38,13 @@ class ConfigChange(Model):
     action: ConfigAction
 
 
+class HookChange(Model):
+    """Sprout's git pre-commit hook, and what happened to it."""
+
+    path: str
+    action: ConfigAction
+
+
 class ServerCommand(Model):
     """How an agent should start ``sprout mcp serve``."""
 
@@ -73,6 +80,7 @@ class InitReport(Model):
     embed_log: str | None = Field(default=None, description="Log of the background indexer.")
     answers: str = Field(description="Where written answers come from, or why they are off.")
     recent_reverts: list[RevertLink]
+    git_hook: HookChange | None = Field(default=None, description="Set with --git-hook.")
     notes: list[str] = Field(default_factory=list)
 
 
@@ -81,5 +89,6 @@ class UninstallReport(Model):
 
     root: str
     configs: list[ConfigChange]
+    git_hook: HookChange
     index_removed: bool
     notes: list[str] = Field(default_factory=list)

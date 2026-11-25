@@ -22,6 +22,7 @@ from sprout.core.index.embedder import Embedder
 from sprout.core.index.indexer import NullProgress, Progress, build_index
 from sprout.core.index.reverts import recent_reverts
 from sprout.core.index.store import INDEX_DIR, Store
+from sprout.core.setup import git_hook as git_hooks
 from sprout.core.setup.background import start_index
 from sprout.core.setup.clients import add_server, remove_server
 from sprout.core.setup.launcher import server_command
@@ -57,6 +58,10 @@ def init(
     wait: Annotated[
         bool, typer.Option("--wait", help="Add vectors now instead of in the background.")
     ] = False,
+    git_hook: Annotated[
+        bool,
+        typer.Option("--git-hook", help="Also install a pre-commit hook that runs the risk check."),
+    ] = False,
     as_json: JsonOption = False,
 ) -> None:
     """Index this repository and connect it to your AI agent's MCP config."""
@@ -66,6 +71,7 @@ def init(
         settings = load_settings(root)
         server = server_command()
         configs = [add_server(root, agent, server) for agent in agents or [Agent.CLAUDE]]
+        hook = git_hooks.install(root) if git_hook else None
         notes: list[str] = []
         if git.head_hash is None:
             notes.append("No commits yet. Make a first commit, then run sprout init again.")
@@ -86,6 +92,7 @@ def init(
             embed_log=indexed.log,
             answers=services.describe_answers(settings),
             recent_reverts=indexed.reverts,
+            git_hook=hook,
             notes=notes,
         )
         emit(report, as_json=as_json, render=render_init)
@@ -98,11 +105,12 @@ def uninstall(
     ] = False,
     as_json: JsonOption = False,
 ) -> None:
-    """Remove Sprout from every agent's MCP config and delete its index."""
+    """Remove Sprout from every agent's MCP config, its git hook, and its index."""
     with handle_errors(as_json=as_json):
         git = _worktree_repo(repo)
         root = git.root
         configs = [remove_server(root, agent) for agent in Agent]
+        hook = git_hooks.remove(root)
         remove_index = not keep_index and (root / INDEX_DIR).exists()
         if remove_index:
             _delete_folder(root / INDEX_DIR)
@@ -112,7 +120,11 @@ def uninstall(
             else []
         )
         report = UninstallReport(
-            root=str(root), configs=configs, index_removed=remove_index, notes=notes
+            root=str(root),
+            configs=configs,
+            git_hook=hook,
+            index_removed=remove_index,
+            notes=notes,
         )
         emit(report, as_json=as_json, render=render_uninstall)
 
@@ -179,6 +191,9 @@ def render_init(report: InitReport, out: Console) -> None:
         out.print(f"Indexed {s.commits:,} commits ({s.reverts:,} reverts) in {INDEX_DIR}/.")
     for change in report.configs:
         out.print(f"{_ACTIONS[change.action]} {change.path}")
+    if report.git_hook is not None:
+        verb = "already set up:" if report.git_hook.action is ConfigAction.UNCHANGED else "added"
+        out.print(f"{verb} the pre-commit risk check ({report.git_hook.path})")
     embed = {
         EmbedState.BACKGROUND: (
             f"Adding semantic vectors in the background (log: {report.embed_log})."
@@ -211,6 +226,8 @@ def render_uninstall(report: UninstallReport, out: Console) -> None:
     for change in report.configs:
         if change.action is not ConfigAction.ABSENT:
             out.print(f"{_ACTIONS[change.action]} {change.path}")
+    if report.git_hook.action is ConfigAction.DELETED_FILE:
+        out.print(f"deleted the pre-commit risk check ({report.git_hook.path})")
     out.print(f"deleted {INDEX_DIR}/" if report.index_removed else f"kept {INDEX_DIR}/")
     for note in report.notes:
         out.print(Text(note, style="dim"))
