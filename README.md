@@ -89,10 +89,15 @@ Of 60 sampled kept sentences, 0.767 are fully supported by the commit they cite 
 
 ### Use it from an AI agent (MCP)
 
-`sprout mcp serve` runs an MCP server over stdio for the repository it starts in. It offers two read-only tools:
+`sprout mcp serve` runs an MCP server over stdio for the repository it starts in. It offers three read-only tools:
 
 - `why`: the same answer as `sprout why`, for a `path:line` or a question. The output is plain text under about 1,500 tokens, with 12-character hashes, the quoted reason, any reverts, and a `Basis:` line that says when no commit states a reason.
 - `search_history`: ranked commits for a query.
+- `explain_commit`: one commit's stated reason, the files and functions it changed, what it reverts or was reverted by, and its diff with secrets redacted.
+
+A reason is quoted only if it passes the same check as `sprout why` answers: copied from the message body and stating a cause, so "Fixes #42." alone does not count.
+
+`sprout mcp serve --http` serves streamable HTTP at `http://127.0.0.1:8765/mcp` instead. On a local address, requests whose Host or Origin header is not local are rejected. There is no authentication, so Sprout warns if you bind to another address.
 
 The server keeps the embedding model, the reranker and the vector index loaded between calls. To add it to Claude Code from a source checkout:
 
