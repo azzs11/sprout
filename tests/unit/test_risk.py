@@ -271,3 +271,12 @@ def test_no_fingerprints_yet_says_so(make_repo: MakeRepo) -> None:
         )
     assert card.level is RiskLevel.LOW
     assert card.notes == ["The index has no fix, security or revert lines yet: run sprout index."]
+
+
+def test_before_ignores_history_that_had_not_happened_yet(payments: RepoBuilder) -> None:
+    edit(payments, "src/payments.py", "RETRIES = 3", "RETRIES = 0")
+    changed = open_repo(payments.root).uncommitted_lines(staged_only=False)
+    revert_at = int(payments.git("log", "-1", "--format=%ct", "--grep=^Revert").strip())
+    with index(payments) as store:
+        assert check_changes(store, changed, before=revert_at).findings == []
+        assert check_changes(store, changed, before=revert_at + 1).level is RiskLevel.HIGH

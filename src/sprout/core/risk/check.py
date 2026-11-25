@@ -58,12 +58,18 @@ class _Hit:
     distinctive: bool = False
 
 
-def check_changes(store: Store, changed: Sequence[ChangedLine]) -> RiskCard:
-    """Compare a change's added and removed lines with the history index."""
+def check_changes(
+    store: Store, changed: Sequence[ChangedLine], *, before: int | None = None
+) -> RiskCard:
+    """Compare a change's added and removed lines with the history index.
+
+    With ``before`` (a Unix time), only commits made before it count: used to replay history
+    without letting later commits leak into the answer.
+    """
     added, removed = _side(changed, added=True), _side(changed, added=False)
     for moved in added.keys() & removed.keys():  # moved or re-indented within this change
         del added[moved], removed[moved]
-    rows = _lookup(store, added.keys() | removed.keys())
+    rows = _lookup(store, added.keys() | removed.keys(), before)
     hits: dict[tuple[int, bool], _Hit] = {}
     for wanted_guard, side in ((False, added), (True, removed)):
         for h, (norm, lines) in side.items():
@@ -129,7 +135,7 @@ def _side(
     return out
 
 
-def _lookup(store: Store, hashes: Iterable[int]) -> dict[int, list[_Row]]:
+def _lookup(store: Store, hashes: Iterable[int], before: int | None) -> dict[int, list[_Row]]:
     wanted = list(hashes)
     out: dict[int, list[_Row]] = {}
     for start in range(0, len(wanted), _CHUNK):
@@ -138,8 +144,10 @@ def _lookup(store: Store, hashes: Iterable[int]) -> dict[int, list[_Row]]:
         query = (
             "SELECT l.hash, l.commit_id, l.added, l.path, c.committed_at"  # noqa: S608 - only "?"
             f" FROM lines l JOIN commits c ON c.id = l.commit_id WHERE l.hash IN ({marks})"
+            " AND c.committed_at < ?"
         )
-        for h, commit_id, guard, path, at in store.db.execute(query, chunk):
+        cutoff = before if before is not None else 2**62
+        for h, commit_id, guard, path, at in store.db.execute(query, [*chunk, cutoff]):
             out.setdefault(int(h), []).append(_Row(int(commit_id), bool(guard), str(path), int(at)))
     return out
 
