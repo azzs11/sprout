@@ -1,0 +1,54 @@
+name: Sprout history check
+description: Comments on a pull request when it undoes a past fix or re-applies a reverted change, citing the commits. No model, no external service.
+author: Akchhya Singh
+branding:
+  icon: git-commit
+  color: green
+
+inputs:
+  fail-on:
+    description: "When to fail the check: security (a past security fix is undone; default), any (any finding), or never."
+    default: security
+  comment:
+    description: "Post, update or remove a pull request comment (true or false). The job summary is always written."
+    default: "true"
+  python-version:
+    description: Python used to run Sprout.
+    default: "3.12"
+
+runs:
+  using: composite
+  steps:
+    - name: Require a pull request event
+      if: github.event_name != 'pull_request' && github.event_name != 'pull_request_target'
+      shell: bash
+      run: |
+        echo "::error::sprout-risk checks pull requests; run it on pull_request events."
+        exit 1
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
+    - name: Install Sprout
+      shell: bash
+      env:
+        PYTHON_VERSION: ${{ inputs.python-version }}
+      run: uv tool install --python "$PYTHON_VERSION" "$GITHUB_ACTION_PATH"
+
+    - name: Restore the history index
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: .sprout
+        key: sprout-index-${{ runner.os }}-${{ github.event.pull_request.base.sha }}
+        restore-keys: sprout-index-${{ runner.os }}-
+
+    - name: Check the pull request against history
+      shell: bash
+      env:
+        SPROUT_BASE: ${{ github.event.pull_request.base.sha }}
+        SPROUT_HEAD: ${{ github.event.pull_request.head.sha }}
+        SPROUT_PR: ${{ github.event.pull_request.number }}
+        SPROUT_FAIL_ON: ${{ inputs.fail-on }}
+        SPROUT_COMMENT: ${{ inputs.comment }}
+        GH_TOKEN: ${{ github.token }}
+      run: bash "$GITHUB_ACTION_PATH/integrations/github-action/check.sh"
