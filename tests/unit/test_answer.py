@@ -385,3 +385,22 @@ def test_why_question(make_repo: MakeRepo) -> None:
     assert answer.evidence
     text = " ".join(s.text for s in answer.sentences)
     assert "reverted" in text
+
+
+def test_facts_never_call_a_subject_line_the_reason(
+    make_repo: Callable[[str], RepoBuilder],
+) -> None:
+    # Body "The card network drops ~1% of requests." states no cause reasons@1 accepts, so
+    # quoting the subject as "the clearest stated reason" would contradict the reason gate.
+    repo = make_repo("payments")
+    git = open_repo(repo.root)
+    answer = why_line(git, None, "src/payments.py", 5)
+    texts = [s.text for s in answer.sentences]
+    assert not any("clearest stated reason" in t for t in texts), texts
+    lineage = make_repo("lineage")
+    kept = why_line(open_repo(lineage.root), None, "src/payments/core.py", 2)
+    assert any(
+        t.text.startswith("The clearest stated reason is in")
+        and "because the card network" in t.text
+        for t in kept.sentences
+    )

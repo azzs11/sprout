@@ -7,7 +7,7 @@ from collections.abc import Mapping
 from sprout.core.answer import structured
 from sprout.core.answer.citations import CheckResult, check_sentences
 from sprout.core.answer.rationale import RationaleScore, score_message
-from sprout.core.answer.reasons import GATE_ID
+from sprout.core.answer.reasons import GATE_ID, vet_reason
 from sprout.core.git.pygit2_repo import Pygit2Repo
 from sprout.core.redact import redact
 from sprout.llm.prompts import load_prompt
@@ -57,14 +57,15 @@ def question_sentences(evidence: list[Evidence]) -> list[Sentence]:
 
 def _common_sentences(evidence: list[Evidence]) -> list[Sentence]:
     out: list[Sentence] = []
-    # Among the most relevant few, the one whose message states its reason most clearly.
-    candidates = [e for e in evidence[:3] if _excerpt(e) and _rationale(e).score > 0.5]
+    # Among the most relevant few, the one whose message states its reason most clearly. The
+    # quote must pass the same gate as model answers, so a subject line is never called a reason.
+    candidates = [e for e in evidence[:3] if _rationale(e).score > 0.5 and _gated(e)]
     best = max(candidates, key=lambda e: _rationale(e).score, default=None)
     if best is not None:
         out.append(
             Sentence(
                 text=f"The clearest stated reason is in {best.commit.short_hash}: "
-                f'"{(_excerpt(best) or "").rstrip(".")}"'
+                f'"{(_gated(best) or "").rstrip(".")}"'
                 + ("…" if _rationale(best).clipped else "")
                 + ".",
                 citations=[best.commit.hash],
@@ -109,8 +110,9 @@ def _rationale(evidence: Evidence) -> RationaleScore:
     return score_message(evidence.commit.message, labels=evidence.labels, refs=len(evidence.refs))
 
 
-def _excerpt(evidence: Evidence) -> str | None:
-    return _rationale(evidence).excerpt
+def _gated(evidence: Evidence) -> str | None:
+    """The reason quote that passes ``reasons@1``, or None."""
+    return vet_reason(None, evidence.commit.message).quote
 
 
 def evidence_blocks(
