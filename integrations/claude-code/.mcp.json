@@ -1,0 +1,6 @@
+{
+  "sprout": {
+    "command": "uvx",
+    "args": ["--from", "git+https://github.com/azzs11/sprout", "sprout", "mcp", "serve"]
+  }
+}

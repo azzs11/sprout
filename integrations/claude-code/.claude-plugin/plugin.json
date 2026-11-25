@@ -1,0 +1,27 @@
+{
+  "name": "sprout",
+  "version": "0.1.0",
+  "description": "Your codebase's memory: ask why code exists and get answers cited from git history, with reverts flagged before you undo an old fix. Runs locally.",
+  "author": {
+    "name": "Akchhya Singh"
+  },
+  "homepage": "https://github.com/azzs11/sprout",
+  "repository": "https://github.com/azzs11/sprout",
+  "license": "MIT",
+  "keywords": [
+    "git",
+    "history",
+    "blame",
+    "why",
+    "reverts",
+    "mcp"
+  ],
+  "network": {
+    "hosts": [
+      "github.com",
+      "pypi.org",
+      "files.pythonhosted.org",
+      "localhost"
+    ]
+  }
+}

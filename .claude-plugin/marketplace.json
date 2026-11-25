@@ -1,0 +1,16 @@
+{
+  "name": "sprout",
+  "description": "Sprout: cited answers from git history for Claude Code.",
+  "owner": {
+    "name": "Akchhya Singh"
+  },
+  "plugins": [
+    {
+      "name": "sprout",
+      "description": "Ask why code exists and get answers cited from git history, with reverts flagged before you undo an old fix. Runs locally.",
+      "source": "./integrations/claude-code",
+      "category": "development",
+      "homepage": "https://github.com/azzs11/sprout"
+    }
+  ]
+}
