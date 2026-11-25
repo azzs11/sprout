@@ -87,12 +87,25 @@ Part of this lead comes from how the benchmark is built: the correct commit is c
 
 Of 60 sampled kept sentences, 0.767 are fully supported by the commit they cite (0.933 at least partly). Without history, the model never names the right commit but still gives a reason for 47% of lines and 96% of questions. The benchmark card lists the other baselines, the judging method and the known biases.
 
+### Use it from an AI agent (MCP)
+
+`sprout mcp serve` runs an MCP server over stdio for the repository it starts in. It offers two read-only tools:
+
+- `why`: the same answer as `sprout why`, for a `path:line` or a question. The output is plain text under about 1,500 tokens, with 12-character hashes, the quoted reason, any reverts, and a `Basis:` line that says when no commit states a reason.
+- `search_history`: ranked commits for a query.
+
+The server keeps the embedding model, the reranker and the vector index loaded between calls. To add it to Claude Code from a source checkout:
+
+```sh
+claude mcp add sprout -- uvx --from /path/to/sprout sprout mcp serve
+```
+
 Everything below is planned and not built yet.
 
 ## Where it is going
 
 - **Regression Memory (`sprout risk`)**: before you commit a change, Sprout checks that code's history for reverts, bug fixes and security fixes, then gives a short risk card with the commits that matter.
-- **MCP server**: AI agents such as Claude Code and Cursor can ask the same questions and run the same risk check before they edit code.
+- **MCP server**: `sprout init` sets it up for Claude Code, Cursor and VS Code, and agents run the same risk check before they edit code.
 - **Commit messages that keep the "why"**: Sprout learns the repository's message style and asks you one question about the reason for a change.
 - **Local-first**: the full pipeline is designed to run offline with local models. Code is sent to a remote model only if you configure one.
 
@@ -104,7 +117,7 @@ Everything below is planned and not built yet.
 | 1 | Foundation: Typer + Rich CLI with `--json`, pygit2 git layer, fixture-repo tests, CI on 3 OSes | Done |
 | 2 | History index: commits, hunks, symbols (tree-sitter), hybrid search | Done |
 | 3 | WhyBench and `sprout why` with cited answers | Done (v0) |
-| 4 | MCP server for AI agents, `sprout init`, Claude Code plugin | Planned |
+| 4 | MCP server for AI agents, `sprout init`, Claude Code plugin | In progress |
 | 5 | Regression Memory: `sprout risk`, git hooks, GitHub Action | Planned |
 | 7 | "Time Machine" web view | Planned |
 | 6 | Commit messages with rationale | Planned |
