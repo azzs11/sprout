@@ -21,7 +21,7 @@ from sprout.core.risk.edits import edit_lines
 from sprout.core.setup import git_hook
 from sprout.errors import SproutError
 from sprout.models import ConfigAction
-from tests.fixtures.builder import RepoBuilder
+from tests.fixtures.builder import AUTHOR, RepoBuilder
 
 MakeRepo = Callable[[str], RepoBuilder]
 UNDO_SECURITY = {
@@ -258,8 +258,13 @@ def test_real_git_commit_runs_the_hook(shop: RepoBuilder) -> None:
     shop.stage("src/auth.py")
     env = {
         **os.environ,
-        "PATH": os.defpath,
-    }  # no sprout-hook on PATH: the fallback interpreter runs
+        "PATH": os.defpath,  # no sprout-hook on PATH: the fallback interpreter runs
+        # CI runners may have no git identity, and git refuses to commit without one.
+        "GIT_AUTHOR_NAME": AUTHOR[0],
+        "GIT_AUTHOR_EMAIL": AUTHOR[1],
+        "GIT_COMMITTER_NAME": AUTHOR[0],
+        "GIT_COMMITTER_EMAIL": AUTHOR[1],
+    }
     blocked = subprocess.run(
         ["git", "-C", str(shop.root), "commit", "-m", "simplify auth"],
         capture_output=True,
