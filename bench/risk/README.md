@@ -59,6 +59,40 @@ The baseline flags 32-38% of commits. At the same 5% alert budget, the baseline 
 the wider label than Sprout on tune (0.355 vs 0.231) and holdout (0.386 vs 0.313), and slightly
 less precise on test (0.330 vs 0.351).
 
+### High findings only
+
+High findings are what the Claude Code edit check asks you about; review findings become a note
+to the agent instead. These rows were added at commit `116f756` with `risk@2` unchanged (every
+number above stayed the same).
+
+| Split | High alerts | Share of commits | Precision, fix-inducing or reverted [95% CI] | Random | Reverts caught |
+|---|---|---|---|---|---|
+| tune | 9 | 0.002 | 0.111 [0.000, 0.375] | 0.124 | 0 of 14 |
+| test | 127 | 0.004 | 0.307 [0.229, 0.380] | 0.147 | 3 of 155 |
+| holdout | 43 | 0.005 | 0.233 [0.114, 0.368] | 0.140 | 0 of 24 |
+
+High findings are rare (about one commit in 200 to 300) and no more precise than all findings
+together. They interrupt because of what they mean (a reverted change or a security fix), not
+because they are measured to be more often right.
+
+## Hook latency
+
+`uv run python -m bench hook-speed --split <split>` starts `sprout-hook agent` as a fresh
+process per event, as an agent hook does. Each repository gets up to 30 Write events that rewrite
+a recently modified file to its version 40 commits earlier (the largest kind of edit). Results:
+[`tune`](../results/risk-hook-speed-v0-tune.md), [`test`](../results/risk-hook-speed-v0-test.md),
+[`holdout`](../results/risk-hook-speed-v0-holdout.md), Apple M-series laptop, Python 3.11.
+
+| Split | Edit p50 per repo (ms) | Edit p95 per repo (ms) | No-op p50 (ms) |
+|---|---|---|---|
+| tune | 78-79 | 89-112 | 24 |
+| test | 80-83 | 85-136 | 24-25 |
+| holdout | 80-82 | 84-99 | 24-25 |
+
+The median edit is under the 100 ms target; the slowest 5% of edits are over it in 5 of 15
+repositories. A no-op (no index, or not an edit) costs about 24 ms. Most of an edit check is
+starting Python and importing Sprout's models, not the lookup.
+
 ## What this shows, and what it does not
 
 - Sprout's warnings point at changes that later needed a fix about twice as often as random, on

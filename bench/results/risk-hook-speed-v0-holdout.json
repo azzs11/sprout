@@ -1,0 +1,89 @@
+{
+  "benchmark": "risk-hook-speed-v0",
+  "split": "holdout",
+  "method": "risk@2",
+  "date": "2026-11-25T13:30:03+00:00",
+  "sprout_version": "0.1.0",
+  "sprout_commit": "116f75675bada0bac2aadd93b411169f17f96fe8",
+  "machine": "Darwin arm64, Python 3.11.18",
+  "repos": {
+    "werkzeug": {
+      "edits": 30,
+      "edit": {
+        "p50": 81.8,
+        "p95": 92.9,
+        "max": 106.1
+      },
+      "noop": {
+        "p50": 24.3,
+        "p95": 35.1,
+        "max": 35.1
+      },
+      "decisions": {
+        "ask": 1,
+        "allow": 10,
+        "deny": 0,
+        "none": 19
+      }
+    },
+    "koa": {
+      "edits": 30,
+      "edit": {
+        "p50": 80.9,
+        "p95": 87.9,
+        "max": 153.5
+      },
+      "noop": {
+        "p50": 24.3,
+        "p95": 24.8,
+        "max": 24.8
+      },
+      "decisions": {
+        "ask": 4,
+        "allow": 20,
+        "deny": 0,
+        "none": 6
+      }
+    },
+    "chi": {
+      "edits": 30,
+      "edit": {
+        "p50": 80.2,
+        "p95": 84.1,
+        "max": 88.2
+      },
+      "noop": {
+        "p50": 24.2,
+        "p95": 24.8,
+        "max": 24.8
+      },
+      "decisions": {
+        "ask": 4,
+        "allow": 9,
+        "deny": 0,
+        "none": 17
+      }
+    },
+    "regex": {
+      "edits": 30,
+      "edit": {
+        "p50": 82.1,
+        "p95": 99.4,
+        "max": 104.3
+      },
+      "noop": {
+        "p50": 24.5,
+        "p95": 25.2,
+        "max": 25.2
+      },
+      "decisions": {
+        "ask": 1,
+        "allow": 4,
+        "deny": 0,
+        "none": 25
+      }
+    }
+  },
+  "worst_repo_edit_p95": 99.4,
+  "median_repo_edit_p95": 90.4
+}

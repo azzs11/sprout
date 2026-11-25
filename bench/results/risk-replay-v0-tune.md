@@ -1,6 +1,6 @@
 # Revert replay v0: tune split
 
-Method `risk@2` (line fingerprints `1`), Sprout 0.1.0 at `2f1c58682abdfa6c7ca5ebca2cbc830d75206f22`, 2026-11-25T13:10:23+00:00, Darwin arm64, Python 3.11.18. Snapshots pinned in `bench/data/whybench-v0/repos.lock.json`.
+Method `risk@2` (line fingerprints `1`), Sprout 0.1.0 at `116f75675bada0bac2aadd93b411169f17f96fe8`, 2026-11-25T13:27:38+00:00, Darwin arm64, Python 3.11.18. Snapshots pinned in `bench/data/whybench-v0/repos.lock.json`.
 
 Each non-merge commit is checked against the history *before* it. **Sprout** flags a commit when `sprout risk` would show any finding (the default). The **baseline** flags a commit that touches a file a fix, security or revert commit touched in the previous 30 days. **Random** flags as many commits as Sprout, at random. Intervals are 95% bootstrap intervals over commits. Gold labels are incomplete: a mistake fixed without a revert or a `fix` label counts as clean.
 
@@ -11,6 +11,7 @@ Each non-merge commit is checked against the history *before* it. **Sprout** fla
 | Flags | Alerts | Alert rate | Precision | Recall | Median lead (days) |
 |---|---|---|---|---|---|
 | Sprout (default) | 259 | 0.055 | 0.008 [0.000, 0.021] | 0.143 [0.000, 0.364] | 31.8 |
+| Sprout, high only (agent hook asks) | 9 | 0.002 | 0.000 [0.000, 0.000] | 0.000 [0.000, 0.000] | n/a |
 | Recent-fix file baseline | 1475 | 0.316 | 0.004 [0.001, 0.007] | 0.429 [0.154, 0.700] | 0.1 |
 | Random, same alert rate | n/a | 0.055 | 0.003 | 0.055 | n/a |
 
@@ -29,6 +30,7 @@ Alert budgets: at most this share of all commits is flagged, highest score first
 | Flags | Alerts | Alert rate | Precision | Recall | Median lead (days) |
 |---|---|---|---|---|---|
 | Sprout (default) | 259 | 0.055 | 0.236 [0.183, 0.287] | 0.106 [0.080, 0.132] | 31.8 |
+| Sprout, high only (agent hook asks) | 9 | 0.002 | 0.111 [0.000, 0.375] | 0.002 [0.000, 0.005] | n/a |
 | Recent-fix file baseline | 1475 | 0.316 | 0.197 [0.178, 0.218] | 0.503 [0.463, 0.543] | 0.1 |
 | Random, same alert rate | n/a | 0.055 | 0.124 | 0.055 | n/a |
 

@@ -19,6 +19,24 @@
         ],
         "lead_days": 20.4
       },
+      "sprout_high": {
+        "commits": 7974,
+        "positives": 24,
+        "alerts": 43,
+        "hits": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "alert_rate": 0.005392525708552797,
+        "precision_ci": [
+          0.0,
+          0.0
+        ],
+        "recall_ci": [
+          0.0,
+          0.0
+        ],
+        "lead_days": null
+      },
       "baseline": {
         "commits": 7974,
         "positives": 24,
@@ -127,6 +145,24 @@
           0.2147
         ],
         "lead_days": 20.4
+      },
+      "sprout_high": {
+        "commits": 7974,
+        "positives": 1117,
+        "alerts": 43,
+        "hits": 10,
+        "precision": 0.23255813953488372,
+        "recall": 0.008952551477170993,
+        "alert_rate": 0.005392525708552797,
+        "precision_ci": [
+          0.1136,
+          0.3684
+        ],
+        "recall_ci": [
+          0.0037,
+          0.0149
+        ],
+        "lead_days": null
       },
       "baseline": {
         "commits": 7974,
@@ -377,9 +413,9 @@
   "split": "holdout",
   "method": "risk@2",
   "lines_version": "1",
-  "date": "2026-11-25T13:11:49+00:00",
+  "date": "2026-11-25T13:29:50+00:00",
   "sprout_version": "0.1.0",
-  "sprout_commit": "2f1c58682abdfa6c7ca5ebca2cbc830d75206f22",
+  "sprout_commit": "116f75675bada0bac2aadd93b411169f17f96fe8",
   "machine": "Darwin arm64, Python 3.11.18",
   "repos": {
     "werkzeug": "0f43c6ebd426039e4b99ec22535c2c8a2ec2f69f",

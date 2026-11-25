@@ -1,0 +1,165 @@
+{
+  "benchmark": "risk-hook-speed-v0",
+  "split": "test",
+  "method": "risk@2",
+  "date": "2026-11-25T13:29:35+00:00",
+  "sprout_version": "0.1.0",
+  "sprout_commit": "116f75675bada0bac2aadd93b411169f17f96fe8",
+  "machine": "Darwin arm64, Python 3.11.18",
+  "repos": {
+    "requests": {
+      "edits": 30,
+      "edit": {
+        "p50": 80.3,
+        "p95": 94.8,
+        "max": 98.5
+      },
+      "noop": {
+        "p50": 24.1,
+        "p95": 24.8,
+        "max": 24.8
+      },
+      "decisions": {
+        "ask": 0,
+        "allow": 5,
+        "deny": 0,
+        "none": 25
+      }
+    },
+    "flask": {
+      "edits": 30,
+      "edit": {
+        "p50": 80.3,
+        "p95": 98.6,
+        "max": 99.7
+      },
+      "noop": {
+        "p50": 24.2,
+        "p95": 24.7,
+        "max": 24.7
+      },
+      "decisions": {
+        "ask": 0,
+        "allow": 10,
+        "deny": 0,
+        "none": 20
+      }
+    },
+    "attrs": {
+      "edits": 30,
+      "edit": {
+        "p50": 79.9,
+        "p95": 105.2,
+        "max": 123.9
+      },
+      "noop": {
+        "p50": 24.4,
+        "p95": 24.9,
+        "max": 24.9
+      },
+      "decisions": {
+        "ask": 0,
+        "allow": 4,
+        "deny": 0,
+        "none": 26
+      }
+    },
+    "express": {
+      "edits": 30,
+      "edit": {
+        "p50": 80.3,
+        "p95": 97.3,
+        "max": 137.0
+      },
+      "noop": {
+        "p50": 24.0,
+        "p95": 24.8,
+        "max": 24.8
+      },
+      "decisions": {
+        "ask": 1,
+        "allow": 3,
+        "deny": 0,
+        "none": 26
+      }
+    },
+    "axios": {
+      "edits": 30,
+      "edit": {
+        "p50": 80.8,
+        "p95": 136.4,
+        "max": 414.3
+      },
+      "noop": {
+        "p50": 24.1,
+        "p95": 24.7,
+        "max": 24.7
+      },
+      "decisions": {
+        "ask": 2,
+        "allow": 8,
+        "deny": 0,
+        "none": 20
+      }
+    },
+    "gin": {
+      "edits": 30,
+      "edit": {
+        "p50": 80.8,
+        "p95": 110.9,
+        "max": 114.6
+      },
+      "noop": {
+        "p50": 24.7,
+        "p95": 25.2,
+        "max": 25.2
+      },
+      "decisions": {
+        "ask": 2,
+        "allow": 9,
+        "deny": 0,
+        "none": 19
+      }
+    },
+    "ripgrep": {
+      "edits": 30,
+      "edit": {
+        "p50": 80.7,
+        "p95": 85.4,
+        "max": 217.8
+      },
+      "noop": {
+        "p50": 24.5,
+        "p95": 33.2,
+        "max": 33.2
+      },
+      "decisions": {
+        "ask": 0,
+        "allow": 6,
+        "deny": 0,
+        "none": 24
+      }
+    },
+    "pytest": {
+      "edits": 30,
+      "edit": {
+        "p50": 82.5,
+        "p95": 108.3,
+        "max": 2643.7
+      },
+      "noop": {
+        "p50": 24.4,
+        "p95": 24.8,
+        "max": 24.8
+      },
+      "decisions": {
+        "ask": 0,
+        "allow": 11,
+        "deny": 0,
+        "none": 19
+      }
+    }
+  },
+  "worst_repo_edit_p95": 136.4,
+  "median_repo_edit_p95": 101.9
+}
