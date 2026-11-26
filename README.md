@@ -124,6 +124,11 @@ git commit -F <(sprout commit --why "Card payments drop 1% of requests at peak."
 
 In a terminal it shows the message and the command to commit it. When its output is piped it prints only the message, and `--json` gives every part.
 
+**Inside your own `git commit`:** `sprout init --commit-hook` adds an opt-in prepare-commit-msg hook. For a plain `git commit`, it writes the draft into the editor, with the why question as a comment. Git removes comments, so a question you don't answer leaves no trace.
+- `-m`, `-F`, templates, merges, squashes and amends already have a message, so they are left alone.
+- The model gets 30 seconds (`SPROUT_COMMIT_TIMEOUT`). After that, the skeleton is used.
+- `SPROUT_SKIP=1` skips it, and `sprout uninstall` removes it. Pre-commit framework users can use the `sprout-commit-msg` hook instead.
+
 ### Measured: WhyBench v0
 
 [WhyBench](bench/README.md) asks which commit explains a line or answers a "why" question. The correct answer for each is a commit whose message states a reason. The headline numbers below come from the **holdout** split: 139 line questions and 44 natural-language questions from 4 repositories (werkzeug, koa, chi, regex) that were added after the method was frozen and run once. From [`bench/results/whybench-v0-holdout.md`](bench/results/whybench-v0-holdout.md):
@@ -189,7 +194,7 @@ Everything below is planned and not built yet.
 
 ## Where it is going
 
-- **Commit messages that keep the "why"**: a git hook that fills in the message during your own `git commit`, an MCP tool for agents, and a blind comparison with diff-only messages.
+- **Commit messages that keep the "why"**: an MCP tool for agents, and a blind comparison with diff-only messages.
 - **"Time Machine" web view**: an annotated edition of a well-known open-source repository, with cited answers for any line.
 - **Release**: `uv tool install` from PyPI, a docs site and a short report.
 - **Local-first throughout**: everything runs offline with local models. Code is sent to a remote model only if you configure one.
