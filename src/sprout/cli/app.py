@@ -9,6 +9,7 @@ import typer
 
 from sprout import __version__
 from sprout.cli.ack import ack, supersede
+from sprout.cli.commit import commit
 from sprout.cli.diff import diff
 from sprout.cli.history import history
 from sprout.cli.index import index
@@ -38,6 +39,7 @@ app.command()(index)
 app.command()(search)
 app.command()(why)
 app.command()(risk)
+app.command()(commit)
 app.command()(ack)
 app.command()(supersede)
 app.command()(init)

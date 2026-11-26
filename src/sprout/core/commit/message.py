@@ -24,7 +24,16 @@ from sprout.core.commit.writer import CommitWriter, Written
 from sprout.core.git.repo import GitRepo
 from sprout.core.redact import redact
 from sprout.errors import ModelError, NothingStagedError, SproutError
-from sprout.models import Commit, CommitDraft, CommitStyle, Diff, DraftSource, FileDiff
+from sprout.models import (
+    Commit,
+    CommitDraft,
+    CommitStyle,
+    Diff,
+    DraftSource,
+    FileDiff,
+    Trailer,
+    TrailerSource,
+)
 
 EXAMPLES = 5
 HISTORY_FILES = 5  # changed files whose history is read for examples
@@ -91,6 +100,16 @@ def draft_message(
         diff_truncated=truncated,
         notes=notes,
     )
+
+
+def with_why(draft: CommitDraft, why: str | None) -> CommitDraft:
+    """The same draft with the author's answer as its ``Why:`` trailer. No model is called."""
+    clean = " ".join(why.split()) if why and why.strip() else None
+    rest = [t for t in draft.trailers if t.key != "Why"]
+    lead = [Trailer(key="Why", value=clean, source=TrailerSource.AUTHOR)] if clean else []
+    trailers = lead + rest
+    message = assemble(draft.subject, draft.body, format_trailers(trailers))
+    return draft.model_copy(update={"why": clean, "trailers": trailers, "message": message})
 
 
 def _ask(
