@@ -2,8 +2,9 @@
 
 A model (when one is configured) writes the subject and body from the redacted diff, with
 past commits to the same files as examples, and asks the author one question. It is told
-never to state a reason; the author's answer is added word for word. Without a model, a
-skeleton subject is guessed from the paths. Sprout never runs ``git commit``.
+never to state a reason; the author's answer is kept word for word in a ``Why:``
+trailer. Without a model, a skeleton subject is guessed from the paths. Sprout never runs
+``git commit``.
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ from sprout.core.commit.subject import (
     guess_type,
     skeleton_description,
 )
+from sprout.core.commit.trailers import build_trailers, find_reverted, format_trailers
 from sprout.core.commit.writer import CommitWriter, Written
 from sprout.core.git.repo import GitRepo
 from sprout.core.redact import redact
@@ -40,8 +42,17 @@ def draft_message(
     style: CommitStyle | None = None,
     writer: CommitWriter | None = None,
     why: str | None = None,
+    fixes: Sequence[int] = (),
 ) -> CommitDraft:
     """Draft a message for ``diff`` (normally the staged diff of ``repo``).
+
+    Args:
+        repo: The repository, for its style, history and branch.
+        diff: The changes to describe.
+        style: The repository's style, when already learned.
+        writer: The model writer; None drafts a skeleton.
+        why: The author's answer to the why question, kept word for word in ``Why:``.
+        fixes: Issue numbers the author says this closes (``Fixes:``).
 
     Raises:
         NothingStagedError: ``diff`` has no files.
@@ -55,15 +66,23 @@ def draft_message(
     notes: list[str] = []
     written = _ask(writer, style, render_examples(past, style), text, notes)
     subject, body, question = _parts(written, style, diff.files, examples or style.examples)
-    if written is None:
+    reverted = find_reverted(repo, diff.files) if diff.staged else None
+    if reverted is not None:
+        subject = f'Revert "{reverted.summary.strip()}"'
+        notes.append(f"The staged diff undoes {reverted.short_hash}, so Reverts: was added.")
+    elif written is None:
         notes.append("Written without a model: edit the subject before committing.")
     clean_why = " ".join(why.split()) if why and why.strip() else None
+    trailers = build_trailers(
+        why=clean_why, fixes=fixes, branch=repo.status().branch, reverts=reverted
+    )
     return CommitDraft(
-        message=assemble(subject, body, clean_why),
+        message=assemble(subject, body, format_trailers(trailers)),
         subject=subject,
         body=body,
         question=question,
         why=clean_why,
+        trailers=trailers,
         source=DraftSource.MODEL if written else DraftSource.SKELETON,
         model=writer.model_id if writer and written else None,
         examples=examples,
@@ -107,9 +126,9 @@ def style_wants_body(style: CommitStyle) -> bool:
     return style.sample_size == 0 or style.body_share >= 0.25
 
 
-def assemble(subject: str, body: str | None, why: str | None) -> str:
-    """Subject, blank line, then the body and the author's why, each wrapped at 72."""
-    paragraphs = [wrap(p) for p in (body, why) if p]
+def assemble(subject: str, body: str | None, trailers: str = "") -> str:
+    """Subject, blank line, the body wrapped at 72, then the trailer block."""
+    paragraphs = [p for p in (wrap(body) if body else "", trailers) if p]
     return "\n\n".join([subject, *paragraphs]) + "\n"
 
 

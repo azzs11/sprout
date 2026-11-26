@@ -10,7 +10,11 @@ import re
 from sprout.models import IssueRef, Label, MessageInfo
 
 _CONVENTIONAL = re.compile(r"^(?P<type>[a-zA-Z]+)(?:\((?P<scope>[^()\n]+)\))?(?P<bang>!)?:\s")
-_REVERT_HASH = re.compile(r"This reverts commit (?P<hash>[0-9a-f]{7,40})", re.IGNORECASE)
+_REVERT_HASH = re.compile(
+    r"(?:This reverts commit |^Reverts:[ \t]*)(?P<hash>[0-9a-f]{7,40})\b",
+    re.IGNORECASE | re.MULTILINE,
+)
+_WHY = re.compile(r"^Why:[ \t]*(?P<first>\S.*)\n?(?P<more>(?:[ \t]+\S.*\n?)*)", re.MULTILINE)
 _REVERT_SUBJECT = re.compile(r'^Revert\s+"(?P<summary>.+)"(?:\s*\(#\d+\))?\s*$')
 _REF = re.compile(
     r"(?<![\w/#&.:])"
@@ -52,6 +56,15 @@ def parse_message(message: str, *, is_merge: bool = False) -> MessageInfo:
         reverts=reverts,
         reverts_summary=quoted["summary"] if quoted else None,
     )
+
+
+def why_trailer(message: str) -> str | None:
+    """The author's reason from a ``Why:`` trailer (continuation lines joined), if any."""
+    paragraphs = [p for p in message.strip().split("\n\n") if p.strip()]
+    if len(paragraphs) < 2:
+        return None
+    match = _WHY.search(paragraphs[-1] + "\n")
+    return " ".join(f"{match['first']} {match['more']}".split()) if match else None
 
 
 def parse_refs(message: str) -> list[IssueRef]:

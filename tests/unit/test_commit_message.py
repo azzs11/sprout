@@ -72,7 +72,10 @@ def test_why_is_kept_word_for_word(make_repo: MakeRepo) -> None:
         repo, repo.diff(staged=True), writer=CommitWriter(FakeProvider(reply=_reply())), why=why
     )
     assert draft.why == "The card network drops ~1% of requests; three retries were not enough."
-    assert draft.message.endswith(f"\n\n{draft.why}\n")
+    assert draft.trailers[0].key == "Why"
+    assert draft.message.endswith(
+        "\n\nWhy: The card network drops ~1% of requests; three retries were not\n  enough.\n"
+    )
     assert draft.message.startswith(draft.subject + "\n\nSet RETRIES back to 3")
 
 
@@ -202,7 +205,7 @@ def test_wrap_and_assemble() -> None:
     bullets = wrap("- " + long + "\n- short")
     assert bullets.splitlines()[1].startswith("  ")
     assert bullets.endswith("- short")
-    assert assemble("feat: x", None, None) == "feat: x\n"
+    assert assemble("feat: x", None) == "feat: x\n"
 
 
 def test_style_learned_once_is_reused(make_repo: MakeRepo) -> None:

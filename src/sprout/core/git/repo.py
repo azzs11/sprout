@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Protocol
 
-from sprout.models import Diff, History, RepoStatus
+from sprout.models import ChangedLine, Diff, History, RepoStatus
 
 
 class GitRepo(Protocol):
@@ -38,6 +38,14 @@ class GitRepo(Protocol):
             rev: Branch, tag or hash to start from.
             path: Only commits that changed this repo-relative path.
         """
+        ...
+
+    def uncommitted_lines(self, *, staged_only: bool, limit: int = 20_000) -> list[ChangedLine]:
+        """Lines changed since HEAD: staged ones only, or everything in the working tree."""
+        ...
+
+    def commit_lines(self, hash_: str, *, limit: int = 2_000) -> list[ChangedLine]:
+        """Added and removed lines of one commit, at most ``limit`` of them."""
         ...
 
     def relative_path(self, path: Path) -> str:

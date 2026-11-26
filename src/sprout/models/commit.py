@@ -43,6 +43,22 @@ class DraftSource(StrEnum):
     SKELETON = "skeleton"
 
 
+class TrailerSource(StrEnum):
+    """Where a trailer's value came from."""
+
+    AUTHOR = "author"  # typed by the author: the why answer or --fixes
+    BRANCH = "branch"  # an issue number in the branch name
+    DIFF = "diff"  # the staged diff undoes a past commit
+
+
+class Trailer(Model):
+    """One ``Key: value`` line at the end of a message, read back by the index."""
+
+    key: str
+    value: str
+    source: TrailerSource
+
+
 class CommitDraft(Model):
     """A proposed commit message. Sprout never commits; the author edits and commits it."""
 
@@ -51,6 +67,7 @@ class CommitDraft(Model):
     body: str | None = Field(description="What changed, in the repository's style.")
     question: str = Field(description="The one question that asks the author why.")
     why: str | None = Field(description="The author's answer, kept word for word.")
+    trailers: list[Trailer] = Field(description="Why, Fixes, Refs and Reverts, in that order.")
     source: DraftSource
     model: str | None = Field(description="Provider and prompt id when a model wrote it.")
     examples: list[str] = Field(description="Subjects of the past commits shown as examples.")

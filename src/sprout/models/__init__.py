@@ -12,7 +12,14 @@ from sprout.models.answer import (
     Sentence,
     WhyAnswer,
 )
-from sprout.models.commit import CommitDraft, CommitStyle, Count, DraftSource
+from sprout.models.commit import (
+    CommitDraft,
+    CommitStyle,
+    Count,
+    DraftSource,
+    Trailer,
+    TrailerSource,
+)
 from sprout.models.git import (
     ChangeKind,
     Commit,
@@ -103,6 +110,8 @@ __all__ = [
     "SearchResults",
     "Sentence",
     "ServerCommand",
+    "Trailer",
+    "TrailerSource",
     "UninstallReport",
     "Verdict",
     "WhyAnswer",

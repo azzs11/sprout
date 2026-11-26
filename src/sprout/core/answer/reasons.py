@@ -12,6 +12,7 @@ import re
 from dataclasses import dataclass
 
 from sprout.core.answer.rationale import score_message, states_reason
+from sprout.core.git.message import why_trailer
 
 _PR_NUMBER = re.compile(r"\s*\(#\d+\)\s*$")
 _PREFIX = re.compile(r"^[\w-]+(?:\([^)]*\))?!?:\s*")
@@ -23,7 +24,9 @@ _REF_ONLY = re.compile(
 _TRAILER = re.compile(r"^[\w-]+(?:-by)?:\s|^--HG--|^branch\s*:", re.IGNORECASE)
 _BULLET = re.compile(r"^\s*[*-]\s")
 MIN_REASON_WORDS = 3
-GATE_ID = "reasons@1"  # recorded in the answer's model id; bump when the rules change
+# Recorded in the answer's model id; bump when the rules change. 1.1 = @1 plus Why: trailers,
+# which no bench repo uses, so published reasons@1 numbers still hold.
+GATE_ID = "reasons@1.1"
 
 
 @dataclass(frozen=True)
@@ -63,7 +66,13 @@ def acceptable(quote: str, message: str) -> bool:
 
 
 def vet_reason(quote: str | None, message: str) -> Reason:
-    """The model's quote if acceptable, else Sprout's own causal excerpt, else what is safe."""
+    """The author's ``Why:``, else the model's quote, else Sprout's excerpt, else what is safe.
+
+    A ``Why:`` trailer is the author's own statement, so it is shown as given.
+    """
+    stated = why_trailer(message)
+    if stated:
+        return Reason(stated)
     if quote and acceptable(quote, message):
         return Reason(quote)
     excerpt = score_message(message, labels=[], refs=0).excerpt

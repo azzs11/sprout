@@ -309,7 +309,7 @@ def test_why_with_model_keeps_checked_sentences(lineage: RepoBuilder, indexed: S
         models=Models(answerer=Answerer(provider)),
     )
     assert answer.mode is AnswerMode.LLM
-    assert answer.model == "fake:model|why_answer@3+why_line_answer@1+reasons@1"
+    assert answer.model == "fake:model|why_answer@3+why_line_answer@1+reasons@1.1"
     assert [s.text for s in answer.sentences] == [
         "Raised retries to 5.",
         'Its message gives the reason: "because the card network times out under load".',
