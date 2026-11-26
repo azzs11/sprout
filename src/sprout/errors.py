@@ -82,3 +82,13 @@ class VectorsUnavailableError(SproutError):
 
 class ModelError(SproutError):
     """Raised when a local or remote model cannot be loaded or called."""
+
+
+class NothingStagedError(SproutError):
+    """Raised when a commit message is requested but no changes are staged."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Nothing is staged, so there is no change to describe.",
+            hint="Stage your changes first, for example: git add -p",
+        )
