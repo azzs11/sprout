@@ -280,3 +280,28 @@ def test_real_git_commit_runs_the_hook(shop: RepoBuilder) -> None:
         env={**env, "SPROUT_SKIP": "1"},
     )
     assert skipped.returncode == 0, skipped.stderr
+
+
+@pytest.mark.skipif(os.name == "nt", reason="git runs hooks through sh; covered on Unix")
+def test_real_git_commit_all_is_checked(shop: RepoBuilder) -> None:
+    """``git commit -a`` stages into a temporary index; the hook must check that one."""
+    git_hook.install(shop.root, python=sys.executable)
+    (shop.root / "src/auth.py").write_text(
+        "def verify_token(token):\n    return token.startswith('t_')\n"
+    )  # not staged
+    env = {
+        **os.environ,
+        "PATH": os.defpath,
+        "GIT_AUTHOR_NAME": AUTHOR[0],
+        "GIT_AUTHOR_EMAIL": AUTHOR[1],
+        "GIT_COMMITTER_NAME": AUTHOR[0],
+        "GIT_COMMITTER_EMAIL": AUTHOR[1],
+    }
+    blocked = subprocess.run(
+        ["git", "-C", str(shop.root), "commit", "-a", "-m", "simplify auth"],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert blocked.returncode != 0
+    assert "undoes a past security fix" in blocked.stderr

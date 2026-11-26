@@ -4,6 +4,8 @@
 (Edit, MultiEdit or Write) on stdin. This module uses the standard library only: it finds the
 repository and returns at once when there is no Sprout index, so hooks cost almost nothing in
 repositories that do not use Sprout. The checks themselves live in ``sprout.hook_checks``.
+``sprout-hook prepare-commit-msg`` (opt-in) drafts the message for a plain ``git commit``; it
+may call a model and lives in ``sprout.hook_commit``.
 
 Both fail open: no index, no repository, an unreadable event or any error means silence and exit 0.
 Environment: ``SPROUT_SKIP=1`` skips, ``SPROUT_RISK_LEVEL=high`` shows only high findings,
@@ -24,7 +26,7 @@ EDIT_TOOLS = frozenset({"Edit", "MultiEdit", "Write"})
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Entry point for ``sprout-hook <pre-commit|agent>``."""
+    """Entry point for ``sprout-hook <pre-commit|agent|prepare-commit-msg>``."""
     args = list(sys.argv[1:] if argv is None else argv)
     if os.environ.get("SPROUT_SKIP") == "1" or not args:
         return 0
@@ -35,6 +37,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             from sprout.hook_checks import pre_commit
 
             return pre_commit(Path.cwd())
+        if args[0] == "prepare-commit-msg":
+            from sprout.hook_commit import prepare_commit_msg
+
+            return prepare_commit_msg(Path.cwd(), args[1:])
         if args[0] == "agent":
             event = cast("dict[str, object]", json.load(sys.stdin))
             if not wants(event):

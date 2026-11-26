@@ -237,3 +237,23 @@ def test_relative_path_is_posix(make_repo: MakeRepo) -> None:
     built = make_repo("renames")
     repo = open_repo(built.root)
     assert repo.relative_path(built.root / "new" / "place.py") == "new/place.py"
+
+
+def test_staged_changes_follow_git_index_file(
+    make_repo: MakeRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``git commit -a`` stages into a temporary index and names it in GIT_INDEX_FILE."""
+    builder = make_repo("linear")
+    builder.write("app.py", "def main():\n    return 3\n")  # changed, not staged
+    repo = open_repo(builder.root)
+    assert repo.diff(staged=True).files == []
+    monkeypatch.setenv("GIT_INDEX_FILE", str(tmp_path / "commit-a.index"))
+    builder.git("read-tree", "HEAD")
+    builder.git("add", "app.py")
+    staged = repo.diff(staged=True)
+    assert [(f.path, f.additions, f.deletions) for f in staged.files] == [("app.py", 1, 1)]
+    lines = repo.uncommitted_lines(staged_only=True)
+    assert {(line.added, line.text) for line in lines} == {
+        (True, "    return 3"),
+        (False, "    return 2"),
+    }

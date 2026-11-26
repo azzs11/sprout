@@ -3,6 +3,7 @@
 #     rev: <tag>
 #     hooks:
 #       - id: sprout-risk
+#       - id: sprout-commit-msg   # optional; needs: pre-commit install -t prepare-commit-msg
 # Run `sprout index` once in the repository; without an index the hook does nothing.
 - id: sprout-risk
   name: sprout risk (git history check)
@@ -12,3 +13,10 @@
   pass_filenames: false
   always_run: true
   stages: [pre-commit]
+- id: sprout-commit-msg
+  name: sprout commit message draft
+  description: Drafts the message for a plain git commit and asks why. Opt-in; may call your model.
+  entry: sprout-hook prepare-commit-msg
+  language: python
+  always_run: true
+  stages: [prepare-commit-msg]

@@ -213,3 +213,10 @@ def test_style_learned_once_is_reused(make_repo: MakeRepo) -> None:
     style = learn_style(repo)
     draft = draft_message(repo, repo.diff(staged=True), style=style)
     assert draft.files == ["src/payments.py"]
+
+
+def test_missing_type_is_guessed_when_the_repo_uses_prefixes(make_repo: MakeRepo) -> None:
+    repo = open_repo(_staged_payments(make_repo).root)
+    writer = CommitWriter(FakeProvider(reply=_reply(type=None)))
+    draft = draft_message(repo, repo.diff(staged=True), writer=writer)
+    assert draft.subject == "perf(payments): restore three charge retries"

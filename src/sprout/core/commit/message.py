@@ -135,7 +135,9 @@ def _parts(
         type_, scope = guess_type(files, examples, style), guess_scope(examples)
         subject = format_subject(style, skeleton_description(files), type_=type_, scope=scope)
         return subject, None, DEFAULT_QUESTION
-    subject = format_subject(style, written.description, type_=written.type_, scope=written.scope)
+    # A repository that uses prefixes always gets one, even when the model left it out.
+    type_ = written.type_ or guess_type(files, examples, style)
+    subject = format_subject(style, written.description, type_=type_, scope=written.scope)
     body = written.body if written.body and style_wants_body(style) else None
     return subject, body, written.question or DEFAULT_QUESTION
 

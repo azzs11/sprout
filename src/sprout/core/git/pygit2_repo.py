@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -131,9 +132,12 @@ class Pygit2Repo:
     def diff(self, *, staged: bool) -> Diff:
         """Return staged changes (index vs HEAD) or unstaged ones (worktree vs index)."""
         self._require_worktree()
-        index = self._repo.index
-        index.read(False)  # pick up changes another process (e.g. `git add`) wrote to disk
-        raw = index.diff_to_tree(self._head_tree()) if staged else index.diff_to_workdir()
+        if staged:
+            raw = self._staged_diff(context_lines=3)
+        else:
+            index = self._repo.index
+            index.read(False)  # pick up changes another process (e.g. `git add`) wrote to disk
+            raw = index.diff_to_workdir()
         raw.find_similar()
         return Diff(staged=staged, files=[_file_diff(patch) for patch in raw if patch is not None])
 
@@ -144,9 +148,7 @@ class Pygit2Repo:
         """
         self._require_worktree()
         if staged_only:
-            index = self._repo.index
-            index.read(False)
-            raw = index.diff_to_tree(self._head_tree(), context_lines=0)
+            raw = self._staged_diff(context_lines=0)
         else:
             raw = self._head_tree().diff_to_workdir(context_lines=0)
         return diff_lines(raw, limit)
@@ -154,6 +156,22 @@ class Pygit2Repo:
     def commit_lines(self, hash_: str, *, limit: int = 2_000) -> list[ChangedLine]:
         """Added and removed lines of one commit, at most ``limit`` of them."""
         return commit_lines(self._repo, self._commit(hash_), limit)
+
+    def _staged_diff(self, *, context_lines: int) -> pygit2.Diff:
+        """HEAD against the index git is committing.
+
+        ``git commit -a`` and ``git commit <paths>`` stage into a temporary index named by
+        ``GIT_INDEX_FILE`` before running hooks. libgit2 ignores that variable, so the file is
+        read here; otherwise a hook would check the wrong changes.
+        """
+        other = os.environ.get("GIT_INDEX_FILE")
+        if other and Path(other).resolve() != (self.git_dir / "index").resolve():
+            tree = self._repo.get(pygit2.Index(str(Path(other).resolve())).write_tree(self._repo))
+            if isinstance(tree, pygit2.Tree):
+                return self._head_tree().diff_to_tree(tree, context_lines=context_lines)
+        index = self._repo.index
+        index.read(False)  # pick up changes another process (e.g. `git add`) wrote to disk
+        return index.diff_to_tree(self._head_tree(), context_lines=context_lines)
 
     def _head_tree(self) -> pygit2.Tree:
         if not self._repo.head_is_unborn:

@@ -1,4 +1,7 @@
-"""Install or remove Sprout's git pre-commit hook. A hook Sprout did not write is never touched."""
+"""Install or remove Sprout's git hooks. A hook Sprout did not write is never touched.
+
+``pre-commit`` runs the model-free risk check. ``prepare-commit-msg`` (opt-in) drafts the message.
+"""
 
 from __future__ import annotations
 
@@ -10,7 +13,10 @@ from sprout.errors import SproutError
 from sprout.models import ConfigAction, HookChange
 
 MARKER = "# sprout-hook: installed by sprout"
-_SCRIPT = """\
+PRE_COMMIT = "pre-commit"
+PREPARE_COMMIT_MSG = "prepare-commit-msg"
+_SCRIPTS = {
+    PRE_COMMIT: """\
 #!/bin/sh
 {marker}. Remove it with: sprout uninstall
 # Warns when staged changes undo a past fix or re-apply a reverted change. No model is called.
@@ -19,13 +25,25 @@ _SCRIPT = """\
 if command -v sprout-hook >/dev/null 2>&1; then exec sprout-hook pre-commit; fi
 if [ -x {python} ]; then exec {python} -m sprout.hook pre-commit; fi
 exit 0
-"""
+""",
+    PREPARE_COMMIT_MSG: """\
+#!/bin/sh
+{marker}. Remove it with: sprout uninstall
+# Drafts the message for a plain git commit (not -m, merges, squashes or amends) and asks why
+# in a comment. It may call your configured model (30 s limit). Skip: SPROUT_SKIP=1.
+[ "$SPROUT_SKIP" = 1 ] && exit 0
+if command -v sprout-hook >/dev/null 2>&1; then exec sprout-hook prepare-commit-msg "$@"; fi
+if [ -x {python} ]; then exec {python} -m sprout.hook prepare-commit-msg "$@"; fi
+exit 0
+""",
+}
+_FRAMEWORK_ID = {PRE_COMMIT: "sprout-risk", PREPARE_COMMIT_MSG: "sprout-commit-msg"}
 
 
-def hook_path(root: Path) -> Path:
-    """Where git looks for this repository's pre-commit hook (honours core.hooksPath)."""
+def hook_path(root: Path, hook: str = PRE_COMMIT) -> Path:
+    """Where git looks for this repository's ``hook`` (honours core.hooksPath)."""
     done = subprocess.run(  # noqa: S603 - fixed arguments, git from PATH
-        ["git", "-C", str(root), "rev-parse", "--git-path", "hooks/pre-commit"],  # noqa: S607
+        ["git", "-C", str(root), "rev-parse", "--git-path", f"hooks/{hook}"],  # noqa: S607
         capture_output=True,
         text=True,
         check=True,
@@ -34,20 +52,20 @@ def hook_path(root: Path) -> Path:
     return path if path.is_absolute() else root / path
 
 
-def install(root: Path, python: str | None = None) -> HookChange:
+def install(root: Path, python: str | None = None, *, hook: str = PRE_COMMIT) -> HookChange:
     """Write the hook. The interpreter is found when the hook runs; ``python`` is the fallback.
 
     Raises:
-        SproutError: another pre-commit hook is already installed.
+        SproutError: another hook of that name is already installed.
     """
-    path = hook_path(root)
-    script = _SCRIPT.format(marker=MARKER, python=_quote(python or sys.executable))
+    path = hook_path(root, hook)
+    script = _SCRIPTS[hook].format(marker=MARKER, python=_quote(python or sys.executable))
     existing = path.read_text(encoding="utf-8", errors="replace") if path.exists() else None
     if existing is not None and MARKER not in existing:
         raise SproutError(
             f"{path} already exists and was not written by Sprout, so it was left alone.",
-            hint="Add this line to it: sprout-hook pre-commit   (or use the pre-commit framework"
-            " entry in Sprout's .pre-commit-hooks.yaml)",
+            hint=f'Add this line to it: sprout-hook {hook} "$@"   (or use the pre-commit'
+            f" framework hook {_FRAMEWORK_ID[hook]} from Sprout's .pre-commit-hooks.yaml)",
         )
     if existing == script:
         return HookChange(path=str(path), action=ConfigAction.UNCHANGED)
@@ -58,9 +76,9 @@ def install(root: Path, python: str | None = None) -> HookChange:
     return HookChange(path=str(path), action=action)
 
 
-def remove(root: Path) -> HookChange:
+def remove(root: Path, *, hook: str = PRE_COMMIT) -> HookChange:
     """Delete the hook if Sprout wrote it."""
-    path = hook_path(root)
+    path = hook_path(root, hook)
     text = path.read_text(encoding="utf-8", errors="replace") if path.exists() else ""
     if MARKER not in text:
         return HookChange(path=str(path), action=ConfigAction.ABSENT)

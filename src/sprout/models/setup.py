@@ -81,6 +81,7 @@ class InitReport(Model):
     answers: str = Field(description="Where written answers come from, or why they are off.")
     recent_reverts: list[RevertLink]
     git_hook: HookChange | None = Field(default=None, description="Set with --git-hook.")
+    commit_hook: HookChange | None = Field(default=None, description="Set with --commit-hook.")
     notes: list[str] = Field(default_factory=list)
 
 
@@ -90,5 +91,6 @@ class UninstallReport(Model):
     root: str
     configs: list[ConfigChange]
     git_hook: HookChange
+    commit_hook: HookChange | None = Field(default=None, description="The message-draft hook.")
     index_removed: bool
     notes: list[str] = Field(default_factory=list)

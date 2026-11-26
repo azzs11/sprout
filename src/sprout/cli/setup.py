@@ -62,6 +62,13 @@ def init(
         bool,
         typer.Option("--git-hook", help="Also install a pre-commit hook that runs the risk check."),
     ] = False,
+    commit_hook: Annotated[
+        bool,
+        typer.Option(
+            "--commit-hook",
+            help="Also install a prepare-commit-msg hook that drafts messages (may use a model).",
+        ),
+    ] = False,
     as_json: JsonOption = False,
 ) -> None:
     """Index this repository and connect it to your AI agent's MCP config."""
@@ -72,6 +79,7 @@ def init(
         server = server_command()
         configs = [add_server(root, agent, server) for agent in agents or [Agent.CLAUDE]]
         hook = git_hooks.install(root) if git_hook else None
+        drafts = git_hooks.install(root, hook=git_hooks.PREPARE_COMMIT_MSG) if commit_hook else None
         notes: list[str] = []
         if git.head_hash is None:
             notes.append("No commits yet. Make a first commit, then run sprout init again.")
@@ -93,6 +101,7 @@ def init(
             answers=services.describe_answers(settings),
             recent_reverts=indexed.reverts,
             git_hook=hook,
+            commit_hook=drafts,
             notes=notes,
         )
         emit(report, as_json=as_json, render=render_init)
@@ -111,6 +120,7 @@ def uninstall(
         root = git.root
         configs = [remove_server(root, agent) for agent in Agent]
         hook = git_hooks.remove(root)
+        drafts = git_hooks.remove(root, hook=git_hooks.PREPARE_COMMIT_MSG)
         remove_index = not keep_index and (root / INDEX_DIR).exists()
         if remove_index:
             _delete_folder(root / INDEX_DIR)
@@ -123,6 +133,7 @@ def uninstall(
             root=str(root),
             configs=configs,
             git_hook=hook,
+            commit_hook=drafts,
             index_removed=remove_index,
             notes=notes,
         )
@@ -194,6 +205,9 @@ def render_init(report: InitReport, out: Console) -> None:
     if report.git_hook is not None:
         verb = "already set up:" if report.git_hook.action is ConfigAction.UNCHANGED else "added"
         out.print(f"{verb} the pre-commit risk check ({report.git_hook.path})")
+    if report.commit_hook is not None:
+        verb = "already set up:" if report.commit_hook.action is ConfigAction.UNCHANGED else "added"
+        out.print(f"{verb} commit message drafts ({report.commit_hook.path})")
     embed = {
         EmbedState.BACKGROUND: (
             f"Adding semantic vectors in the background (log: {report.embed_log})."
@@ -228,6 +242,8 @@ def render_uninstall(report: UninstallReport, out: Console) -> None:
             out.print(f"{_ACTIONS[change.action]} {change.path}")
     if report.git_hook.action is ConfigAction.DELETED_FILE:
         out.print(f"deleted the pre-commit risk check ({report.git_hook.path})")
+    if report.commit_hook and report.commit_hook.action is ConfigAction.DELETED_FILE:
+        out.print(f"deleted commit message drafts ({report.commit_hook.path})")
     out.print(f"deleted {INDEX_DIR}/" if report.index_removed else f"kept {INDEX_DIR}/")
     for note in report.notes:
         out.print(Text(note, style="dim"))
