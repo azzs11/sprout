@@ -1,0 +1,281 @@
+{
+  "tasks": 60,
+  "arms": {
+    "sprout": {
+      "style": 0.879,
+      "style_prefix": 0.85,
+      "style_capital": 0.75,
+      "style_period": 0.95,
+      "style_length": 0.967,
+      "type_match": 0.0,
+      "rouge_l": 0.253,
+      "has_body": 0.333,
+      "restates": 0.017,
+      "gives_reason": 0.017,
+      "asks_why": 0.983,
+      "model_ok": 0.983
+    },
+    "diff_only": {
+      "style": 0.875,
+      "style_prefix": 0.85,
+      "style_capital": 0.783,
+      "style_period": 0.95,
+      "style_length": 0.917,
+      "type_match": 0.111,
+      "rouge_l": 0.241,
+      "has_body": 0.683,
+      "restates": 0.0,
+      "gives_reason": 0.05,
+      "asks_why": null,
+      "model_ok": 1.0
+    },
+    "skeleton": {
+      "style": 0.887,
+      "style_prefix": 0.85,
+      "style_capital": 0.75,
+      "style_period": 0.95,
+      "style_length": 1.0,
+      "type_match": 0.0,
+      "rouge_l": 0.133,
+      "has_body": 0.0,
+      "restates": 0.0,
+      "gives_reason": 0.0,
+      "asks_why": null,
+      "model_ok": 1.0
+    },
+    "real": {
+      "style": 0.963,
+      "style_prefix": 1.0,
+      "style_capital": 1.0,
+      "style_period": 1.0,
+      "style_length": 0.85,
+      "type_match": 1.0,
+      "rouge_l": 1.0,
+      "has_body": 0.117,
+      "restates": 0.033,
+      "gives_reason": 0.033,
+      "asks_why": null,
+      "model_ok": 1.0
+    }
+  },
+  "seconds_p50": {
+    "sprout": 9.8,
+    "diff_only": 3.19
+  },
+  "paired": {
+    "style": {
+      "mean": 0.004,
+      "low": -0.021,
+      "high": 0.033
+    },
+    "rouge_l": {
+      "mean": 0.012,
+      "low": -0.029,
+      "high": 0.058
+    },
+    "restates": {
+      "mean": 0.017,
+      "low": 0.0,
+      "high": 0.05
+    },
+    "gives_reason": {
+      "mean": -0.033,
+      "low": -0.1,
+      "high": 0.033
+    }
+  },
+  "per_repo": {
+    "click": {
+      "sprout": {
+        "style": 0.875,
+        "style_prefix": 1.0,
+        "style_capital": 0.7,
+        "style_period": 0.85,
+        "style_length": 0.95,
+        "type_match": null,
+        "rouge_l": 0.271,
+        "has_body": 0.1,
+        "restates": 0.0,
+        "gives_reason": 0.0,
+        "asks_why": 0.95,
+        "model_ok": 1.0
+      },
+      "diff_only": {
+        "style": 0.887,
+        "style_prefix": 1.0,
+        "style_capital": 0.85,
+        "style_period": 0.85,
+        "style_length": 0.85,
+        "type_match": null,
+        "rouge_l": 0.252,
+        "has_body": 0.75,
+        "restates": 0.0,
+        "gives_reason": 0.15,
+        "asks_why": null,
+        "model_ok": 1.0
+      },
+      "skeleton": {
+        "style": 0.887,
+        "style_prefix": 1.0,
+        "style_capital": 0.7,
+        "style_period": 0.85,
+        "style_length": 1.0,
+        "type_match": null,
+        "rouge_l": 0.076,
+        "has_body": 0.0,
+        "restates": 0.0,
+        "gives_reason": 0.0,
+        "asks_why": null,
+        "model_ok": 1.0
+      },
+      "real": {
+        "style": 0.963,
+        "style_prefix": 1.0,
+        "style_capital": 1.0,
+        "style_period": 1.0,
+        "style_length": 0.85,
+        "type_match": null,
+        "rouge_l": 1.0,
+        "has_body": 0.1,
+        "restates": 0.0,
+        "gives_reason": 0.0,
+        "asks_why": null,
+        "model_ok": 1.0
+      }
+    },
+    "cobra": {
+      "sprout": {
+        "style": 0.8,
+        "style_prefix": 0.6,
+        "style_capital": 0.6,
+        "style_period": 1.0,
+        "style_length": 1.0,
+        "type_match": 0.0,
+        "rouge_l": 0.237,
+        "has_body": 0.9,
+        "restates": 0.05,
+        "gives_reason": 0.05,
+        "asks_why": 1.0,
+        "model_ok": 0.95
+      },
+      "diff_only": {
+        "style": 0.787,
+        "style_prefix": 0.6,
+        "style_capital": 0.55,
+        "style_period": 1.0,
+        "style_length": 1.0,
+        "type_match": 0.125,
+        "rouge_l": 0.222,
+        "has_body": 0.75,
+        "restates": 0.0,
+        "gives_reason": 0.0,
+        "asks_why": null,
+        "model_ok": 1.0
+      },
+      "skeleton": {
+        "style": 0.8,
+        "style_prefix": 0.6,
+        "style_capital": 0.6,
+        "style_period": 1.0,
+        "style_length": 1.0,
+        "type_match": 0.0,
+        "rouge_l": 0.235,
+        "has_body": 0.0,
+        "restates": 0.0,
+        "gives_reason": 0.0,
+        "asks_why": null,
+        "model_ok": 1.0
+      },
+      "real": {
+        "style": 0.963,
+        "style_prefix": 1.0,
+        "style_capital": 1.0,
+        "style_period": 1.0,
+        "style_length": 0.85,
+        "type_match": 1.0,
+        "rouge_l": 1.0,
+        "has_body": 0.25,
+        "restates": 0.1,
+        "gives_reason": 0.1,
+        "asks_why": null,
+        "model_ok": 1.0
+      }
+    },
+    "httpx": {
+      "sprout": {
+        "style": 0.963,
+        "style_prefix": 0.95,
+        "style_capital": 0.95,
+        "style_period": 1.0,
+        "style_length": 0.95,
+        "type_match": 0.0,
+        "rouge_l": 0.251,
+        "has_body": 0.0,
+        "restates": 0.0,
+        "gives_reason": 0.0,
+        "asks_why": 1.0,
+        "model_ok": 1.0
+      },
+      "diff_only": {
+        "style": 0.95,
+        "style_prefix": 0.95,
+        "style_capital": 0.95,
+        "style_period": 1.0,
+        "style_length": 0.9,
+        "type_match": 0.0,
+        "rouge_l": 0.249,
+        "has_body": 0.55,
+        "restates": 0.0,
+        "gives_reason": 0.0,
+        "asks_why": null,
+        "model_ok": 1.0
+      },
+      "skeleton": {
+        "style": 0.975,
+        "style_prefix": 0.95,
+        "style_capital": 0.95,
+        "style_period": 1.0,
+        "style_length": 1.0,
+        "type_match": 0.0,
+        "rouge_l": 0.088,
+        "has_body": 0.0,
+        "restates": 0.0,
+        "gives_reason": 0.0,
+        "asks_why": null,
+        "model_ok": 1.0
+      },
+      "real": {
+        "style": 0.963,
+        "style_prefix": 1.0,
+        "style_capital": 1.0,
+        "style_period": 1.0,
+        "style_length": 0.85,
+        "type_match": 1.0,
+        "rouge_l": 1.0,
+        "has_body": 0.0,
+        "restates": 0.0,
+        "gives_reason": 0.0,
+        "asks_why": null,
+        "model_ok": 1.0
+      }
+    }
+  },
+  "benchmark": "commit-replay-v0",
+  "split": "tune",
+  "model": "qwen2.5-coder:7b",
+  "prompts": [
+    "commit_message@1",
+    "commit_diff_only@1"
+  ],
+  "tasks_rule": "20 per repo, people's single-parent commits since 2024-10-01",
+  "date": "2026-11-26T06:05:28+00:00",
+  "sprout_version": "0.1.0",
+  "sprout_commit": "b386e6bfb1a18112fc5bc826452049bb0f954097-dirty",
+  "machine": "Darwin arm64, Python 3.11.18",
+  "repos": {
+    "click": "08b803cf32ceb2ae6a772c62d5da42757a897d44",
+    "httpx": "7cff5f79bc78649bbcd3fd9aa7a74c86e0f63016",
+    "cobra": "adbc8813901bba65827259daa8e22ff94ec1f30e"
+  },
+  "rows_file": "commit-replay-v0-tune-qwen2.5-coder_7b.jsonl"
+}
