@@ -1,6 +1,6 @@
 # Using Sprout from AI agents (MCP)
 
-Sprout's MCP server gives an agent four read-only tools for the repository it runs in:
+Sprout's MCP server gives an agent five read-only tools for the repository it runs in:
 
 | Tool | Use it to |
 |---|---|
@@ -8,6 +8,7 @@ Sprout's MCP server gives an agent four read-only tools for the repository it ru
 | `search_history` | Find commits by topic |
 | `explain_commit` | Read one commit: stated reason, files and functions changed, reverts, redacted diff |
 | `check_edit` | Before an edit: proceed, review or stop, citing the past fixes and reverts it would undo (no model) |
+| `suggest_commit_message` | Before a commit: the repository's message style, past messages for the same files, and a draft with `Why:`/`Fixes:`/`Refs:`/`Reverts:` trailers. The agent passes the reason the user gave, never one it made up (no model; it never commits) |
 
 The output is plain text under about 1,500 tokens. Every claim carries a 12-character commit hash. A `Basis:` line says whether a commit message states the reason or not. When none does, the message text is shown as written and labelled as not checked.
 

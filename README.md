@@ -160,12 +160,13 @@ claude plugin install sprout@sprout
 
 For Cursor, VS Code and other agents, and for a snippet that tells agents when to call Sprout, see [docs/mcp.md](docs/mcp.md).
 
-`sprout mcp serve` runs an MCP server over stdio for the repository it starts in. It offers four read-only tools:
+`sprout mcp serve` runs an MCP server over stdio for the repository it starts in. It offers five read-only tools:
 
 - `why`: the same answer as `sprout why`, for a `path:line` or a question. The output is plain text under about 1,500 tokens, with 12-character hashes, the quoted reason, any reverts, and a `Basis:` line that says when no commit states a reason.
 - `search_history`: ranked commits for a query.
 - `explain_commit`: one commit's stated reason, the files and functions it changed, what it reverts or was reverted by, and its diff with secrets redacted.
 - `check_edit`: before an edit, the same check as `sprout risk`. You pass the path and the old and new text, a diff, or nothing for the uncommitted changes. It returns proceed, review or stop with the cited commits, and calls no model.
+- `suggest_commit_message`: before a commit, the repository's message style, past messages for the same files, and a draft with trailers (`Why:` holds the reason the user gave; the agent is told never to invent one). It calls no model and never commits.
 
 A reason is quoted only if it passes the same check as `sprout why` answers: copied from the message body and stating a cause, so "Fixes #42." alone does not count.
 
