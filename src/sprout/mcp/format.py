@@ -10,6 +10,7 @@ from sprout.core.answer.reasons import has_body, vet_reason
 from sprout.models import (
     AnswerMode,
     ChangedFile,
+    CommitDraft,
     CommitExplanation,
     Evidence,
     IssueRef,
@@ -144,6 +145,34 @@ def risk_text(card: RiskCard) -> str:
         if card.verdict.value == "review"
         else "What to do: stop and ask the user before making this change; cite the commits above."
     )
+    return fit(lines)
+
+
+def draft_text(draft: CommitDraft) -> str:
+    """Render a message skeleton the agent finishes: style, examples, then the draft."""
+    reverting = draft.subject.startswith('Revert "')
+    lines = [
+        "suggest_commit_message (no model; Sprout never commits).",
+        f"Style: {draft.style}",
+        "Past commits to these files, newest first:",
+        *(f"- {_clip(s, _SUMMARY)}" for s in draft.examples or ["(none)"]),
+        f"Files: {', '.join(draft.files[:12])}" + (" ..." if len(draft.files) > 12 else ""),
+        (
+            "Draft (this change undoes a recent commit: keep the Revert subject and the trailers):"
+            if reverting
+            else "Draft (the subject is a placeholder: rewrite the subject, and add a body if"
+            " the style has one, saying what changed; keep the trailer lines exactly):"
+        ),
+        *draft.message.rstrip("\n").splitlines(),
+        "",
+    ]
+    if draft.why is None:
+        lines.append(
+            "No Why: trailer yet. Quote the reason the user gave for this change, or ask them,"
+            " then call again with why=. Never invent a reason."
+        )
+    notes = [n for n in draft.notes if not n.startswith("Written without a model")]
+    lines += [f"Note: {note}" for note in notes]
     return fit(lines)
 
 

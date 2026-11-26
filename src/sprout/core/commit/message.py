@@ -20,7 +20,7 @@ from sprout.core.commit.subject import (
     skeleton_description,
 )
 from sprout.core.commit.trailers import build_trailers, find_reverted, format_trailers
-from sprout.core.commit.writer import CommitWriter, Written
+from sprout.core.commit.writer import CommitWriter, Written, describe_style
 from sprout.core.git.repo import GitRepo
 from sprout.core.redact import redact
 from sprout.errors import ModelError, NothingStagedError, SproutError
@@ -94,6 +94,7 @@ def draft_message(
         trailers=trailers,
         source=DraftSource.MODEL if written else DraftSource.SKELETON,
         model=writer.model_id if writer and written else None,
+        style=describe_style(style),
         examples=examples,
         files=[f.path for f in diff.files],
         redacted=redacted,

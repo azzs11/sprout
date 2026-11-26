@@ -69,7 +69,9 @@ def test_lists_read_only_tools(session: Session) -> None:
             return (await client.list_tools()).tools
 
     tools = {t.name: t for t in asyncio.run(run())}
-    assert set(tools) == {"why", "search_history", "explain_commit", "check_edit"}
+    assert set(tools) == {
+        "why", "search_history", "explain_commit", "check_edit", "suggest_commit_message"
+    }  # fmt: skip
     assert all(t.annotations and t.annotations.read_only_hint for t in tools.values())
     assert tools["why"].input_schema["required"] == ["target"]
 
@@ -166,7 +168,13 @@ def test_stdio_server_starts(make_repo: MakeRepo) -> None:
             return names, result.content[0].text  # type: ignore[union-attr]
 
     names, text = asyncio.run(run())
-    assert names == {"why", "search_history", "explain_commit", "check_edit"}
+    assert names == {
+        "why",
+        "search_history",
+        "explain_commit",
+        "check_edit",
+        "suggest_commit_message",
+    }
     assert "Basis: the top commit's message states the reason" in text
 
 
@@ -351,3 +359,43 @@ def test_check_edit_errors(session: Session, make_repo: MakeRepo) -> None:
     plain.close()
     assert error
     assert "Fix: Build it with: sprout index" in text
+
+
+def test_suggest_commit_message_asks_for_the_users_reason(session: Session) -> None:
+    root = session.repo.root
+    text = (root / "src/payments.py").read_text()
+    (root / "src/payments.py").write_text(text.replace("RETRIES = 3", "RETRIES = 5"))
+    error, out = call(session, "suggest_commit_message", {})
+    assert not error, out
+    assert out.startswith("suggest_commit_message (no model; Sprout never commits).")
+    assert "Style: Conventional Commits, types: " in out
+    assert "- feat(payments): retry failed charges three times" in out
+    assert "the subject is a placeholder" in out
+    assert "perf(payments): update payments.py" in out
+    assert "Never invent a reason." in out
+    assert "Note: Nothing is staged" in out
+    assert "Written without a model" not in out
+
+
+def test_suggest_commit_message_with_why_and_a_hand_revert(session: Session) -> None:
+    root = session.repo.root
+    (root / "src/auth.py").write_text(
+        "def verify_token(token):\n    return bool(token) and token.startswith('t_')\n"
+    )
+    subprocess.run(["git", "-C", str(root), "add", "src/auth.py"], check=True)
+    why = "The hmac call rejected every valid token in production."
+    error, out = call(session, "suggest_commit_message", {"why": why, "fixes": [51]})
+    assert not error, out
+    assert "keep the Revert subject" in out
+    lines = out.splitlines()
+    assert 'Revert "fix(auth): compare tokens in constant time to prevent timing attacks"' in lines
+    assert f"Why: {why}" in lines
+    assert "Fixes: #51" in lines
+    assert any(line.startswith("Reverts: ") for line in lines)
+    assert "Never invent" not in out
+
+
+def test_suggest_commit_message_without_changes(session: Session) -> None:
+    error, out = call(session, "suggest_commit_message", {})
+    assert error
+    assert "git add" in out

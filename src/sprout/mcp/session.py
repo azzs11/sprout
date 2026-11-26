@@ -15,6 +15,7 @@ from sprout.config import Settings, load_settings
 from sprout.core.answer.commit import explain_commit
 from sprout.core.answer.target import why_target
 from sprout.core.answer.why import Models, WhyOptions
+from sprout.core.commit.message import draft_message
 from sprout.core.git import open_repo
 from sprout.core.index.store import Store
 from sprout.core.retrieve.hybrid import search
@@ -23,7 +24,7 @@ from sprout.core.risk.check import check_changes
 from sprout.core.risk.edits import file_change
 from sprout.core.risk.patch import parse_unified
 from sprout.errors import IndexNotFoundError, SproutError
-from sprout.models import CommitExplanation, RiskCard, SearchResults, WhyAnswer
+from sprout.models import CommitDraft, CommitExplanation, RiskCard, SearchResults, WhyAnswer
 
 
 class Session:
@@ -100,6 +101,26 @@ class Session:
             if store is None:
                 raise IndexNotFoundError(str(self.repo.root))
             return check_changes(store, changed, ignore=acks.ignored(self.repo.root))
+
+    def suggest_message(self, *, why: str | None, fixes: list[int]) -> CommitDraft:
+        """A message skeleton for the staged changes, or the unstaged ones if none are staged.
+
+        No model is called: the agent writes the subject and body from the style and examples.
+
+        Raises:
+            NothingStagedError: there are no changes to tracked files.
+        """
+        with self.lock:
+            diff = self.repo.diff(staged=True)
+            notes: list[str] = []
+            if not diff.files:
+                diff = self.repo.diff(staged=False)
+                notes.append(
+                    "Nothing is staged, so this describes the unstaged changes to tracked files."
+                    " Stage them (git add) before committing; new files are not included."
+                )
+            draft = draft_message(self.repo, diff, why=why, fixes=fixes)
+        return draft.model_copy(update={"notes": [*notes, *draft.notes]})
 
     def close(self) -> None:
         """Close the index."""

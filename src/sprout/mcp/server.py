@@ -23,8 +23,10 @@ a check, retry, timeout or workaround: it shows the commits behind the line, quo
 stated reason, and flags reverts. Before an edit that removes or rewrites existing code, call
 `check_edit` with the path, old and new text: it returns proceed, review or stop, citing past
 fixes and reverts the edit would undo. Use `explain_commit` to read a cited commit and
-`search_history` to find commits by topic. Cite the commit hashes these tools return. If
-they say no commit states a reason, say that instead of guessing.
+`search_history` to find commits by topic. Before committing, call `suggest_commit_message`
+with the reason the user gave (never an invented one) and write the message in its style.
+Cite the commit hashes these tools return. If they say no commit states a reason, say that
+instead of guessing.
 """
 _READ_ONLY = ToolAnnotations(read_only_hint=True, idempotent_hint=True, open_world_hint=False)
 
@@ -88,6 +90,26 @@ def build_server(session: Session) -> MCPServer:
         commits the change runs into. Deterministic, no model.
         """
         return _run(lambda: fmt.risk_text(session.check(path=path, old=old, new=new, diff=diff)))
+
+    @server.tool(annotations=_READ_ONLY)
+    def suggest_commit_message(
+        why: Annotated[
+            str | None,
+            Field(
+                description="The user's own reason for the change, quoted from their request."
+                " Leave it out rather than guess."
+            ),
+        ] = None,
+        fixes: Annotated[
+            list[int] | None, Field(description="Issue numbers this change closes.")
+        ] = None,
+    ) -> str:
+        """Before committing: the repo's message style, past messages and a draft with trailers.
+
+        Covers the staged changes (else the unstaged ones). The draft carries Why, Fixes, Refs
+        and Reverts trailers for the history index. Deterministic, no model; it never commits.
+        """
+        return _run(lambda: fmt.draft_text(session.suggest_message(why=why, fixes=fixes or [])))
 
     return server
 

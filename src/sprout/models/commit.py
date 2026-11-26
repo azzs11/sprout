@@ -70,6 +70,7 @@ class CommitDraft(Model):
     trailers: list[Trailer] = Field(description="Why, Fixes, Refs and Reverts, in that order.")
     source: DraftSource
     model: str | None = Field(description="Provider and prompt id when a model wrote it.")
+    style: str = Field(description="The repository's message style in one line.")
     examples: list[str] = Field(description="Subjects of the past commits shown as examples.")
     files: list[str] = Field(description="Paths in the diff.")
     redacted: int = Field(description="Secrets removed from the diff before any model call.")
