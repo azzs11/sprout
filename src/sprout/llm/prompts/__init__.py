@@ -35,6 +35,11 @@ class Prompt:
 def load_prompt(name: str) -> Prompt:
     """Load ``prompts/<name>.md`` from the installed package."""
     text = files("sprout.llm.prompts").joinpath(f"{name}.md").read_text(encoding="utf-8")
+    return parse_prompt(text, name)
+
+
+def parse_prompt(text: str, name: str) -> Prompt:
+    """Parse a prompt file's text (front matter, ``=== system ===``, ``=== user ===``)."""
     match = _FRONT_MATTER.match(text)
     if match is None:
         raise ValueError(f"prompt {name} has no front matter")

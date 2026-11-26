@@ -27,7 +27,7 @@ def read_commit(repo: pygit2.Repository, commit: pygit2.Commit) -> CommitRecord:
         return CommitRecord(
             commit=model, message_info=info, files=[], files_truncated=False, code_terms=[]
         )
-    diff = _base_tree(repo, commit).diff_to_tree(commit.tree, context_lines=0, interhunk_lines=0)
+    diff = base_tree(repo, commit).diff_to_tree(commit.tree, context_lines=0, interhunk_lines=0)
     diff.find_similar()
     patches = [p for p in diff if p is not None]
     terms: dict[str, None] = {}
@@ -45,7 +45,7 @@ def commit_lines(repo: pygit2.Repository, commit: pygit2.Commit, limit: int) -> 
     """Added and removed lines of ``commit`` against its first parent (none for merges)."""
     if len(commit.parent_ids) > 1:
         return []
-    diff = _base_tree(repo, commit).diff_to_tree(commit.tree, context_lines=0, interhunk_lines=0)
+    diff = base_tree(repo, commit).diff_to_tree(commit.tree, context_lines=0, interhunk_lines=0)
     return diff_lines(diff, limit)
 
 
@@ -79,7 +79,7 @@ def commit_patch(repo: pygit2.Repository, commit: pygit2.Commit, max_chars: int)
     """The commit's unified diff (3 lines of context), cut to ``max_chars``."""
     if len(commit.parent_ids) > 1:
         return ""
-    diff = _base_tree(repo, commit).diff_to_tree(commit.tree)
+    diff = base_tree(repo, commit).diff_to_tree(commit.tree)
     diff.find_similar()
     text = diff.patch or ""
     return text if len(text) <= max_chars else text[:max_chars] + "\n[diff truncated]\n"
@@ -89,7 +89,7 @@ def file_patch(repo: pygit2.Repository, commit: pygit2.Commit, path: str, max_ch
     """The part of ``commit``'s diff that touches ``path`` (new or old name)."""
     if len(commit.parent_ids) > 1:
         return ""
-    diff = _base_tree(repo, commit).diff_to_tree(commit.tree)
+    diff = base_tree(repo, commit).diff_to_tree(commit.tree)
     diff.find_similar()
     for patch in diff:
         if patch is None:
@@ -100,7 +100,7 @@ def file_patch(repo: pygit2.Repository, commit: pygit2.Commit, path: str, max_ch
     return ""
 
 
-def _base_tree(repo: pygit2.Repository, commit: pygit2.Commit) -> pygit2.Tree:
+def base_tree(repo: pygit2.Repository, commit: pygit2.Commit) -> pygit2.Tree:
     """First parent's tree, or the empty tree for a root commit."""
     if commit.parents:
         return commit.parents[0].tree

@@ -10,7 +10,14 @@ import pygit2
 from pygit2.enums import DeltaStatus, FileStatus, ObjectType, SortMode
 
 from sprout.core.git.convert import DELTA_KINDS, EMPTY_TREE, commit_model
-from sprout.core.git.reader import commit_lines, commit_patch, diff_lines, file_patch, read_commit
+from sprout.core.git.reader import (
+    base_tree,
+    commit_lines,
+    commit_patch,
+    diff_lines,
+    file_patch,
+    read_commit,
+)
 from sprout.errors import (
     BareRepositoryError,
     NoCommitsError,
@@ -152,6 +159,13 @@ class Pygit2Repo:
         else:
             raw = self._head_tree().diff_to_workdir(context_lines=0)
         return diff_lines(raw, limit)
+
+    def commit_diff(self, hash_: str) -> Diff:
+        """One commit's changes against its first parent, shaped like a staged diff."""
+        commit = self._commit(hash_)
+        raw = base_tree(self._repo, commit).diff_to_tree(commit.tree)
+        raw.find_similar()
+        return Diff(staged=True, files=[_file_diff(patch) for patch in raw if patch is not None])
 
     def commit_lines(self, hash_: str, *, limit: int = 2_000) -> list[ChangedLine]:
         """Added and removed lines of one commit, at most ``limit`` of them."""

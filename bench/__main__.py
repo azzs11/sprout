@@ -1,4 +1,4 @@
-"""Bench commands: ``uv run python -m bench <build|lines|candidates|run|speed|answers|faithfulness|risk|hook-speed|agent-impact>``."""
+"""Bench commands: ``uv run python -m bench <build|lines|candidates|run|speed|answers|faithfulness|risk|hook-speed|agent-impact|commit-replay>``."""
 
 from __future__ import annotations
 
@@ -328,6 +328,15 @@ def _register_agent_impact() -> None:
 
 
 _register_agent_impact()
+
+
+def _register_commit_replay() -> None:
+    from bench.commit.cli import commit_app
+
+    app.add_typer(commit_app)
+
+
+_register_commit_replay()
 
 
 def _sprout_commit() -> str:
