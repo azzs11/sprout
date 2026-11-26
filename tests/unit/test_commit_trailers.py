@@ -114,3 +114,7 @@ def test_folded_why_reads_back(text: str) -> None:
         return
     message = "fix: x\n\n" + format_trailers(build_trailers(why=why))
     assert why_trailer(message) == why
+
+
+def test_why_trailer_in_a_crlf_message() -> None:
+    assert why_trailer("fix: x\r\n\r\nWhy: the API changed.\r\n") == "the API changed."

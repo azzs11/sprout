@@ -94,3 +94,16 @@ def test_trailer_keys_need_a_whole_trailer_paragraph() -> None:
     assert trailer_keys("fix: x\n\nWhy: it broke\nFixes: #4") == ["Why", "Fixes"]
     assert trailer_keys("fix: x\n\nIt broke. See: the log") == []
     assert trailer_keys("Signed-off-by: only a subject") == []
+
+
+def test_crlf_messages_and_squash_commit_lists(make_repo: MakeRepo) -> None:
+    repo = make_repo("empty")
+    repo.write("a.py", "a = 1\n").commit(
+        "Add a (#1)\n\n* Add a\r\n\r\n* Update a.py\r\n\r\n---------"
+    )
+    repo.write("a.py", "a = 2\n").commit("Bump a (#2)\n\nCo-authored-by: B <b@c.d>\r\n")
+    repo.write("a.py", "a = 3\n").commit("Fix a (#3)\n\nThe old value broke imports.\r\nSee #2.")
+    style = learn_style(open_repo(repo.root))
+    assert style.body_share == round(1 / 3, 3)  # only the hand-written body counts
+    assert [c.value for c in style.trailers] == ["Co-authored-by"]
+    assert trailer_keys("x\r\n\r\nSigned-off-by: A <a@b.c>\r\n") == ["Signed-off-by"]

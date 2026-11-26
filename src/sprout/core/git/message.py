@@ -60,7 +60,7 @@ def parse_message(message: str, *, is_merge: bool = False) -> MessageInfo:
 
 def why_trailer(message: str) -> str | None:
     """The author's reason from a ``Why:`` trailer (continuation lines joined), if any."""
-    paragraphs = [p for p in message.strip().split("\n\n") if p.strip()]
+    paragraphs = [p for p in message.replace("\r\n", "\n").strip().split("\n\n") if p.strip()]
     if len(paragraphs) < 2:
         return None
     match = _WHY.search(paragraphs[-1] + "\n")

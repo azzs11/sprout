@@ -16,6 +16,7 @@ EXAMPLES = 5
 _PREFIX = re.compile(r"^[a-zA-Z]+(?:\([^()\n]+\))?!?:\s*")
 _PR_SUFFIX = re.compile(r"\(#\d+\)\s*$")
 _TRAILER = re.compile(r"^(?P<key>[A-Za-z][A-Za-z0-9-]*): \S")
+_SQUASH_LINE = re.compile(r"^(?:\* \S.*|-{3,})$")
 # First words ending like this are not imperative even though they end in -s or -ed.
 _NOT_THIRD_PERSON = ("ss", "us", "is", "ys")
 _IMPERATIVE_ED = frozenset({"embed", "feed", "need", "seed", "shed", "speed", "proceed", "succeed"})
@@ -56,7 +57,7 @@ def is_imperative(description: str) -> bool:
 
 def trailer_keys(message: str) -> list[str]:
     """Keys of the trailer block (the last paragraph, when every line is ``Key: value``)."""
-    paragraphs = [p for p in message.strip().split("\n\n") if p.strip()]
+    paragraphs = [p for p in _lf(message).strip().split("\n\n") if p.strip()]
     if len(paragraphs) < 2:
         return []
     lines = paragraphs[-1].strip().splitlines()
@@ -76,12 +77,21 @@ def is_authored(commit: Commit) -> bool:
 
 
 def _body(message: str) -> str:
+    """Text after the subject, without trailers or a squash merge's generated commit list."""
+    message = _lf(message)
     _, _, rest = message.strip().partition("\n")
     keys = trailer_keys(message)
     text = rest.strip()
     if keys:
         text = text.rpartition("\n\n")[0] if "\n\n" in text else ""
+    if all(_SQUASH_LINE.match(line) for line in text.splitlines() if line.strip()):
+        return ""  # only "* <subject>" bullets and "-----": GitHub wrote it, not the author
     return text.strip()
+
+
+def _lf(message: str) -> str:
+    """Messages written on GitHub often use CRLF; paragraphs are split on blank lines."""
+    return message.replace("\r\n", "\n")
 
 
 def _share(flags: Iterable[bool]) -> float:
