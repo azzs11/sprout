@@ -1,6 +1,6 @@
 # sprout
 
-> **Status: early stage.** Sprout is being rebuilt from scratch. History search and cited "why" answers work; warnings for people and agents are next. This README describes where it is going and what works today.
+> **Status: early stage.** History search, cited "why" answers, warnings for people and AI agents, and an MCP server work today. Commit messages that keep the "why" are being built. Sprout is not on PyPI yet; install it from a source checkout.
 
 Sprout is meant to be your codebase's memory. It will answer "why is this code like this?" from git history, cite the commits that prove each answer, and warn people and AI coding agents before they repeat a past mistake.
 
@@ -106,6 +106,24 @@ The level is a word (`low`, `review`, `high`), not a colour. `high` means undoin
 
 So a warning points at a change that later needed fixing about twice as often as chance. It rarely predicts an actual revert: it caught 22 of 155 reverts on test and 1 of 24 on holdout, where its revert precision is no better than random. At the same 5% alert budget, simply ranking commits by how many recent fixes touched their files does better on holdout (0.386 vs 0.313) and slightly worse on test (0.330 vs 0.351). The card lists the known biases, including that the "fixed later" label and Sprout's own warnings both lean on fix commits.
 
+### Write commit messages that keep the why
+
+```sh
+git add -p
+sprout commit                       # drafts a message and asks you one question about why
+sprout commit --why "..." -o msg.txt && git commit -F msg.txt
+git commit -F <(sprout commit --why "Card payments drop 1% of requests at peak.")
+```
+
+`sprout commit` never commits. It prints a message for your staged changes, and you commit it yourself.
+
+- **Style:** it learns how the repository writes messages from its own recent commits (merges, reverts and bot commits are skipped). That covers Conventional Commit types and scopes, capitals, full stops, subject length and how often there is a body. Past commits to the same files are shown to the model as examples.
+- **What:** a local Ollama model (or Claude, if you opt in) describes what the diff changes. Secrets are removed from the diff first. The model is told never to give a reason. Without a model, or with `--no-llm`, you get a subject guessed from the paths and past commits, to edit.
+- **Why:** the model asks you one question about the change. Your answer is kept word for word in a `Why:` trailer, and `sprout why` later shows it as that commit's reason.
+- **Other trailers:** `--fixes 12` adds `Fixes: #12`. An issue number in the branch name (`fix/12-retries`) adds `Refs: #12`, which closes nothing. If the staged diff undoes a recent commit by hand, the subject becomes `Revert "..."` with a `Reverts: <hash>` trailer, so Regression Memory learns about it too.
+
+In a terminal it shows the message and the command to commit it. When its output is piped it prints only the message, and `--json` gives every part.
+
 ### Measured: WhyBench v0
 
 [WhyBench](bench/README.md) asks which commit explains a line or answers a "why" question. The correct answer for each is a commit whose message states a reason. The headline numbers below come from the **holdout** split: 139 line questions and 44 natural-language questions from 4 repositories (werkzeug, koa, chi, regex) that were added after the method was frozen and run once. From [`bench/results/whybench-v0-holdout.md`](bench/results/whybench-v0-holdout.md):
@@ -146,7 +164,7 @@ For Cursor, VS Code and other agents, and for a snippet that tells agents when t
 
 A reason is quoted only if it passes the same check as `sprout why` answers: copied from the message body and stating a cause, so "Fixes #42." alone does not count.
 
-`sprout mcp serve --http` serves streamable HTTP at `http://127.0.0.1:8765/mcp` instead. On a local address, requests whose Host or Origin header is not local are rejected. There is no authentication, so Sprout warns if you bind to another address.
+`sprout mcp serve --http` serves streamable HTTP on this machine instead (`--port` picks the port). Requests whose Host or Origin header is not local are rejected. There is no authentication, so Sprout warns if you bind to another address.
 
 The server keeps the embedding model, the reranker and the vector index loaded between calls.
 
@@ -171,10 +189,10 @@ Everything below is planned and not built yet.
 
 ## Where it is going
 
-- **Regression Memory (`sprout risk`)**: before you commit a change, Sprout checks that code's history for reverts, bug fixes and security fixes, then gives a short risk card with the commits that matter.
-- **MCP server**: `sprout init` sets it up for Claude Code, Cursor and VS Code, and agents run the same risk check before they edit code.
-- **Commit messages that keep the "why"**: Sprout learns the repository's message style and asks you one question about the reason for a change.
-- **Local-first**: the full pipeline is designed to run offline with local models. Code is sent to a remote model only if you configure one.
+- **Commit messages that keep the "why"**: a git hook that fills in the message during your own `git commit`, an MCP tool for agents, and a blind comparison with diff-only messages.
+- **"Time Machine" web view**: an annotated edition of a well-known open-source repository, with cited answers for any line.
+- **Release**: `uv tool install` from PyPI, a docs site and a short report.
+- **Local-first throughout**: everything runs offline with local models. Code is sent to a remote model only if you configure one.
 
 ## Roadmap
 
@@ -185,12 +203,10 @@ Everything below is planned and not built yet.
 | 2 | History index: commits, hunks, symbols (tree-sitter), hybrid search | Done |
 | 3 | WhyBench and `sprout why` with cited answers | Done (v0) |
 | 4 | MCP server for AI agents, `sprout init`, Claude Code plugin | Done |
-| 5 | Regression Memory: `sprout risk`, git hooks, GitHub Action | In progress |
+| 5 | Regression Memory: `sprout risk`, git hooks, GitHub Action | Done |
+| 6 | Commit messages with rationale: `sprout commit` | In progress |
 | 7 | "Time Machine" web view | Planned |
-| 6 | Commit messages with rationale | Planned |
 | 8 | PyPI release, docs site, report | Planned |
-
-Phases 6 and 7 run in this order on purpose: the web view comes before commit messages.
 
 ## Development
 
